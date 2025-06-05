@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-use crate::models::{dto::RegisterUserData, errors::{AppError, AppResult}};
+use crate::{models::{dto::RegisterUserData, errors::{AppError, AppResult}}, utils::password::hash_password};
 
 pub async fn check_user_conflicts(db: &PgPool, user_data: &RegisterUserData) -> AppResult<()> {
     let user_check = sqlx::query!(
@@ -31,10 +31,12 @@ pub async fn check_user_conflicts(db: &PgPool, user_data: &RegisterUserData) -> 
     Ok(())
 }
 
-pub async fn insert_user(db: &PgPool, user_data: &RegisterUserData) -> Result<(), sqlx::Error> {
+pub async fn insert_user(db: &PgPool, user_data: &RegisterUserData) -> AppResult<()> {
+    let password = hash_password(&user_data.password).map_err(AppError::Crypto)?;
+
     sqlx::query!(
-        "INSERT INTO users (username, display_name, email, password, gender, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6)",
-        user_data.username, user_data.username, user_data.email, user_data.password, user_data.gender as _, user_data.date_of_birth,
+        "INSERT INTO users (username, display_name, email, password, is_male, date_of_birth) VALUES ($1, $2, $3, $4, $5, $6)",
+        user_data.username, user_data.username, user_data.email, password, user_data.is_male, user_data.date_of_birth,
     )
     .execute(db)
     .await?;

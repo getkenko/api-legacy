@@ -1,10 +1,14 @@
 use axum::{http::StatusCode, response::{IntoResponse, Response}, Json};
 use serde::Serialize;
 
+// TODO: Print internal errors to the console
+
 pub type AppResult<T> = Result<T, AppError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error("Invalid email and password combination")]
+    InvalidCredentials,
     #[error("This username is already taken")]
     UsernameTaken,
     #[error("This email address is already linked to an existing account")]
@@ -12,14 +16,17 @@ pub enum AppError {
 
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
+    #[error("Internal cryptographic error")]
+    Crypto(argon2::password_hash::Error),
 }
 
 impl AppError {
     fn status_code(&self) -> StatusCode {
         match self {
+            Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
-            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) | Self::Crypto(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

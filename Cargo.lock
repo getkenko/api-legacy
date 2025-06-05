@@ -39,6 +39,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "argon2"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c3610892ee6e0cbce8ae2700349fcf8f98adb0dbfbee85aec3c9179d29cc072"
+dependencies = [
+ "base64ct",
+ "blake2",
+ "cpufeatures",
+ "password-hash",
+]
+
+[[package]]
 name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -142,6 +154,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "blake2"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46502ad458c9a52b69d4d4d32775c788b7a1b85e8bc9d482d92250fc0e3f8efe"
+dependencies = [
+ "digest",
 ]
 
 [[package]]
@@ -479,7 +500,19 @@ checksum = "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26145e563e54f2cadc477553f1ec5ee650b00862f0a58bcd12cbdc5f0ea2d2f4"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "r-efi",
+ "wasi 0.14.2+wasi-0.2.4",
 ]
 
 [[package]]
@@ -789,6 +822,7 @@ dependencies = [
 name = "kenko-api"
 version = "0.1.0"
 dependencies = [
+ "argon2",
  "axum",
  "chrono",
  "dotenvy",
@@ -797,6 +831,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tower-http",
+ "uuid",
 ]
 
 [[package]]
@@ -896,7 +931,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78bed444cc8a2160f01cbcf811ef18cac863ad68ae8ca62092e8db51d51c761c"
 dependencies = [
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.59.0",
 ]
 
@@ -929,7 +964,7 @@ dependencies = [
  "num-integer",
  "num-iter",
  "num-traits",
- "rand",
+ "rand 0.8.5",
  "smallvec",
  "zeroize",
 ]
@@ -1006,6 +1041,17 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "password-hash"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "346f04948ba92c43e8469c1ee6736c7563d71012b17d40745260fe106aac2166"
+dependencies = [
+ "base64ct",
+ "rand_core 0.6.4",
+ "subtle",
 ]
 
 [[package]]
@@ -1099,14 +1145,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "r-efi"
+version = "5.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74765f6d916ee2faa39bc8e68e4f3ed8949b48cccdac59983d287a7cb71ce9c5"
+
+[[package]]
 name = "rand"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
 dependencies = [
  "libc",
- "rand_chacha",
- "rand_core",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
+]
+
+[[package]]
+name = "rand"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fbfd9d094a40bf3ae768db9361049ace4c0e04a4fd6b359518bd7b73a73dd97"
+dependencies = [
+ "rand_chacha 0.9.0",
+ "rand_core 0.9.3",
 ]
 
 [[package]]
@@ -1116,7 +1178,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
- "rand_core",
+ "rand_core 0.6.4",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3022b5f1df60f26e1ffddd6c66e8aa15de382ae63b3a0c1bfc0e4d3e3f325cb"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.9.3",
 ]
 
 [[package]]
@@ -1125,7 +1197,16 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.16",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
+dependencies = [
+ "getrandom 0.3.3",
 ]
 
 [[package]]
@@ -1150,7 +1231,7 @@ dependencies = [
  "num-traits",
  "pkcs1",
  "pkcs8",
- "rand_core",
+ "rand_core 0.6.4",
  "signature",
  "spki",
  "subtle",
@@ -1270,7 +1351,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "digest",
- "rand_core",
+ "rand_core 0.6.4",
 ]
 
 [[package]]
@@ -1437,7 +1518,7 @@ dependencies = [
  "memchr",
  "once_cell",
  "percent-encoding",
- "rand",
+ "rand 0.8.5",
  "rsa",
  "serde",
  "sha1",
@@ -1477,7 +1558,7 @@ dependencies = [
  "md-5",
  "memchr",
  "once_cell",
- "rand",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "sha2",
@@ -1780,8 +1861,23 @@ version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cf4199d1e5d15ddd86a694e4d0dffa9c323ce759fea589f00fef9d81cc1931d"
 dependencies = [
+ "getrandom 0.3.3",
  "js-sys",
+ "rand 0.9.1",
+ "serde",
+ "uuid-macro-internal",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "uuid-macro-internal"
+version = "1.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26b682e8c381995ea03130e381928e0e005b7c9eb483c6c8682f50e07b33c2b7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1801,6 +1897,15 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wasi"
+version = "0.14.2+wasi-0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9683f9a5a998d873c0d21fcbe3c083009670149a8fab228644b8bd36b2c48cb3"
+dependencies = [
+ "wit-bindgen-rt",
+]
 
 [[package]]
 name = "wasite"
@@ -2082,6 +2187,15 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "wit-bindgen-rt"
+version = "0.39.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
+dependencies = [
+ "bitflags",
+]
 
 [[package]]
 name = "writeable"

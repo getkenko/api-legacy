@@ -1,8 +1,6 @@
 use chrono::NaiveDate;
 use serde::Deserialize;
 
-use super::database::Gender;
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginCredentials {
@@ -17,6 +15,6 @@ pub struct RegisterUserData {
     pub display_name: String,
     pub email: String,
     pub password: String,
-    pub gender: Gender,
+    pub is_male: bool,
     pub date_of_birth: NaiveDate,
 }
