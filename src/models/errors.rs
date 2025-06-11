@@ -1,32 +1,53 @@
 use axum::{http::StatusCode, response::{IntoResponse, Response}, Json};
 use serde::Serialize;
 
+use crate::models::database::AccountState;
+
 // TODO: Print internal errors to the console
+// TODO: Use constants for validation errors
 
 pub type AppResult<T> = Result<T, AppError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    #[error("You need to be signed in to access this resource")]
+    Unathorized,
+
+    // AUTH
     #[error("Invalid email and password combination")]
     InvalidCredentials,
+    #[error("Your account is {0}")]
+    AccountNotActive(AccountState),
+
     #[error("This username is already taken")]
     UsernameTaken,
     #[error("This email address is already linked to an existing account")]
     EmailTaken,
 
+    // VALIDATION
+    #[error("Bad username length! It must be between 4 and 16")]
+    BadUsernameLength,
+    #[error("Invalid username provided, it should consist of alphanumeric characters")]
+    InvalidUsername,
+
+    // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
     #[error("Internal cryptographic error")]
     Crypto(argon2::password_hash::Error),
+    #[error("Internal jwt error")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
 }
 
 impl AppError {
     fn status_code(&self) -> StatusCode {
         match self {
-            Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
+            Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
-            Self::Database(_) | Self::Crypto(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::BadUsernameLength | Self::InvalidUsername => StatusCode::BAD_REQUEST,
+
+            Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

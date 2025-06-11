@@ -1,6 +1,6 @@
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
 
-use crate::{database::user::{check_user_conflicts, insert_user}, models::{database::{AccountState, User}, dto::{LoginCredentials, RegisterUserData}, errors::{AppError, AppResult}}, utils::{password::verify_password, validation::{validate_email, validate_password, validate_username}}};
+use crate::{database::user::{check_user_conflicts, insert_user}, models::{database::{AccountState}, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, utils::{jwt::{AccessToken, AuthToken, RefreshToken}, password::verify_password, validation::{validate_email, validate_password, validate_username}}};
 
 use super::AppState;
 
@@ -13,7 +13,7 @@ pub fn router() -> Router<AppState> {
 async fn login(
     State(db): State<AppState>,
     Json(credentials): Json<LoginCredentials>,
-) -> AppResult<()> {
+) -> AppResult<Json<LoginResponse>> {
     // try to find the user
     let user = sqlx::query!(
         r#"
@@ -33,10 +33,21 @@ async fn login(
         return Err(AppError::InvalidCredentials);
     }
 
-    // create JWT tokens
-    // return 'em
+    if user.account_state != AccountState::Active {
+        return Err(AppError::AccountNotActive(user.account_state));
+    }
 
-    Ok(())
+    // create JWT tokens
+    let access = AccessToken::new(&user.id, &user.display_name);
+    let refresh = RefreshToken::new(&user.id);
+
+    // return em
+    let body = LoginResponse {
+        access: access.encode()?,
+        refresh: refresh.encode()?,
+    };
+
+    Ok(Json(body))
 }
 
 async fn register(
