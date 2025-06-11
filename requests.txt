@@ -1,9 +1,0 @@
-curl -v -d \
-'{"email":"swaglord@kenko.app", "password":"test123456"}' \
--H "Content-Type: application/json" \
-http://127.0.0.1:3000/auth/login
-
-curl -v -d \
-'{"username":"swaglord", "email":"swaglord@kenko.app", "password": "test123456", "isMale": true, "dateOfBirth": "1998-12-22"}' \
--H "Content-Type: application/json" \
-http://127.0.0.1:3000/auth/register
