@@ -1,6 +1,7 @@
 use sqlx::PgPool;
+use uuid::Uuid;
 
-use crate::{models::{dto::RegisterUserData, errors::{AppError, AppResult}}, utils::password::hash_password};
+use crate::{models::{database::AccountState, dto::RegisterUserData, errors::{AppError, AppResult}}, utils::{jwt::AccessToken, password::hash_password}};
 
 pub async fn check_user_conflicts(db: &PgPool, user_data: &RegisterUserData) -> AppResult<()> {
     let user_check = sqlx::query!(
@@ -29,6 +30,26 @@ pub async fn check_user_conflicts(db: &PgPool, user_data: &RegisterUserData) -> 
     }
 
     Ok(())
+}
+
+pub async fn find_user_token_data(db: &PgPool, user_id: &Uuid) -> AppResult<AccessToken> {
+    // TODO: do something more than returning unathorized if the user doesn't exist
+    // e.g. remove cookies
+
+    let user = sqlx::query!(
+        r#"SELECT display_name, account_state AS "account_state: AccountState" FROM users WHERE id = $1"#,
+        user_id,
+    )
+    .fetch_optional(db)
+    .await?
+    .ok_or(AppError::Unathorized)?;
+
+    if user.account_state != AccountState::Active {
+        return Err(AppError::AccountNotActive(user.account_state));
+    }
+
+    let token = AccessToken::new(user_id, &user.display_name);
+    Ok(token)
 }
 
 pub async fn insert_user(db: &PgPool, user_data: &RegisterUserData) -> AppResult<()> {

@@ -30,6 +30,18 @@ pub enum AppError {
     #[error("Invalid username provided, it should consist of alphanumeric characters")]
     InvalidUsername,
 
+    #[error("Email address has invalid format")]
+    InvalidEmailFormat,
+    #[error("The provided email address is too long")]
+    EmailTooLong,
+
+    #[error("Bad password length. It must be between 8 and 2048 characters")]
+    BadPasswordLength,
+    #[error("Password requires at least 2 special characters")]
+    PasswordNotEnoughSymbols,
+    #[error("Password requires at least 3 digits")]
+    PasswordNotEnoughDigits,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -45,7 +57,7 @@ impl AppError {
             Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
-            Self::BadUsernameLength | Self::InvalidUsername => StatusCode::BAD_REQUEST,
+            Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong | Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits => StatusCode::BAD_REQUEST,
 
             Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
