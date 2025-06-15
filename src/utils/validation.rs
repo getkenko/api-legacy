@@ -147,7 +147,7 @@ mod tests {
             "no-at.domain.com",
             "user@.invalid.com",
             "user@invalid..com",
-            // ".user@example.com",
+            ".user@example.com",
             "user.@example.com",
             "user..name@example.com",
             "user@example..com",
@@ -161,6 +161,19 @@ mod tests {
         for email in emails {
             let valid = validate_email(email).is_err();
             assert!(valid, "{email}");
+        }
+    }
+
+    #[test]
+    fn test_valid_password() {
+        let values = [
+            "abc!e123",
+            "@ea532@#@!!!",
+            "3aha2aha1aha@",
+        ];
+
+        for value in values {
+            // let valid = valid
         }
     }
 }
