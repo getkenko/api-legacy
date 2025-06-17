@@ -76,7 +76,7 @@ pub fn validate_password(password: &str) -> AppResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_email, validate_username};
+    use super::{validate_email, validate_password, validate_username};
 
     #[test]
     fn test_valid_usernames() {
@@ -173,7 +173,8 @@ mod tests {
         ];
 
         for value in values {
-            // let valid = valid
+            let valid = validate_password(value).is_ok();
+            assert!(valid, "{value}");
         }
     }
 }

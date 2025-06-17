@@ -1,4 +1,4 @@
 pub mod validation;
 pub mod password;
 pub mod jwt;
-pub mod jwt_middleware;
+pub mod auth_middleware;

@@ -1,6 +1,7 @@
 mod models;
-mod database;
 mod utils;
+mod database;
+mod services;
 mod routes;
 
 use sqlx::postgres::PgPoolOptions;
