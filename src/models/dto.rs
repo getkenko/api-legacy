@@ -1,6 +1,9 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::database::{Language, Theme};
+
+// AUTH
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginCredentials {
@@ -22,4 +25,25 @@ pub struct RegisterUserData {
     pub password: String,
     pub is_male: bool,
     pub date_of_birth: NaiveDate,
+}
+
+// USERS
+#[derive(Serialize)]
+pub struct UserInfo {
+    // user
+    pub username: String,
+    pub display_name: String,
+    pub email: String,
+    pub avatar_url: Option<String>,
+    pub created_at: DateTime<Utc>,
+
+    // details
+    pub is_male: bool,
+    pub weight: f32,
+    pub height: i32,
+    pub date_of_birth: NaiveDate,
+
+    // preferences
+    pub theme: Theme,
+    pub language: Language,
 }

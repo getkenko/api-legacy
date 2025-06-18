@@ -2,14 +2,14 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::User;
+use crate::models::{database::User, dto::UserInfo};
 
 pub async fn find_user_by_id(db: &PgPool, id: &Uuid) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
         User,
         r#"
         SELECT
-            id, username, display_name, email, password, is_male, date_of_birth, avatar_url, account_state AS "account_state: _", created_at
+            id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
         FROM
             users
         WHERE
@@ -29,7 +29,7 @@ pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option
         User,
         r#"
         SELECT
-            id, username, display_name, email, password, is_male, date_of_birth, avatar_url, account_state AS "account_state: _", created_at
+            id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
         FROM
             users
         WHERE
@@ -42,6 +42,35 @@ pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option
     .await?;
 
     Ok(user)
+}
+
+pub async fn fetch_user_info(db: &PgPool, id: &Uuid) -> sqlx::Result<UserInfo> {
+    let info = sqlx::query_as!(
+        UserInfo,
+        r#"
+        SELECT
+            u.username,
+            u.display_name,
+            u.email,
+            u.avatar_url,
+            u.created_at,
+            ud.is_male,
+            ud.weight,
+            ud.height,
+            ud.date_of_birth,
+            up.theme AS "theme: _",
+            up.language AS "language: _"
+        FROM users u
+        INNER JOIN user_details ud ON u.id = ud.user_id
+        INNER JOIN user_preferences up ON u.id = up.user_id
+        WHERE u.id = $1
+        "#,
+        id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(info)
 }
 
 #[derive(Default)]
@@ -77,12 +106,10 @@ pub async fn insert_user(
     username: &str,
     email: &str,
     password: &str,
-    is_male: bool,
-    date_of_birth: NaiveDate,
 ) -> sqlx::Result<()> {
     sqlx::query!(
-        "INSERT INTO users (username, email, password, is_male, date_of_birth) VALUES ($1, $2, $3, $4, $5)",
-        username, email, password, is_male, date_of_birth,
+        "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+        username, email, password,
     )
     .execute(db)
     .await?;

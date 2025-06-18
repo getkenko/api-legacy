@@ -42,7 +42,9 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
     }
 
     let password = hash_password(&user_data.password).map_err(AppError::Crypto)?;
-    insert_user(&db, &user_data.username, &user_data.email, &password, user_data.is_male, user_data.date_of_birth).await?;
+    insert_user(db, &user_data.username, &user_data.email, &password).await?;
+
+    // TODO: insert birth date and is_male
 
     Ok(())
 }

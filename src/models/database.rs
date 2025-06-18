@@ -12,14 +12,28 @@ pub enum AccountState {
     Inactive,
 }
 
+#[derive(Serialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "theme_enum", rename_all = "snake_case")]
+pub enum Theme {
+    Dark,
+    Light,
+}
+
+#[derive(Serialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "language_enum", rename_all = "snake_case")]
+pub enum Language {
+    English,
+    Polish,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,
     pub display_name: String,
     pub email: String,
     pub password: String,
-    pub is_male: bool,
-    pub date_of_birth: NaiveDate,
     pub avatar_url: Option<String>,
     pub account_state: AccountState,
     pub created_at: DateTime<Utc>,
