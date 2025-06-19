@@ -1,3 +1,5 @@
+#![deny(dead_code)]
+
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +26,8 @@ pub struct RegisterUserData {
     pub email: String,
     pub password: String,
     pub is_male: bool,
+    pub weight: f32,
+    pub height: i32,
     pub date_of_birth: NaiveDate,
 }
 
@@ -46,4 +50,18 @@ pub struct UserInfo {
     // preferences
     pub theme: Theme,
     pub language: Language,
+}
+
+#[derive(Deserialize)]
+pub struct NewUserDetails {
+    pub is_male: Option<bool>,
+    pub weight: Option<f32>,
+    pub height: Option<i32>,
+    pub date_of_birth: Option<NaiveDate>,
+}
+
+#[derive(Deserialize)]
+pub struct NewUserPreferences {
+    pub theme: Option<Theme>,
+    pub language: Option<Language>,
 }

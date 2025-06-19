@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use crate::{database::user::find_user_by_id, models::errors::{AppError, AppResult}, routes::AppState, utils::jwt::{AccessToken, AuthToken, RefreshToken}};
 
 fn get_access_token(cookies: &CookieJar) -> Result<Option<AccessToken>, jsonwebtoken::errors::Error> {
-    let cookie = cookies.get("access_token").map(|c| c.value());
+    let cookie = cookies.get("access").map(|c| c.value());
     if let Some(value) = cookie {
         let token = AccessToken::decode(value)?;
         return Ok(token);
@@ -16,7 +16,7 @@ fn get_access_token(cookies: &CookieJar) -> Result<Option<AccessToken>, jsonwebt
 
 fn get_refresh_token(cookies: &CookieJar) -> Result<Option<RefreshToken>, jsonwebtoken::errors::Error> {
     let cookie = cookies
-        .get("refresh_token")
+        .get("refresh")
         .map(|c| c.value());
 
     if let Some(value) = cookie {
@@ -28,10 +28,10 @@ fn get_refresh_token(cookies: &CookieJar) -> Result<Option<RefreshToken>, jsonwe
 }
 
 async fn authorize_user(db: &PgPool, cookies: &CookieJar) -> AppResult<AccessToken> {
-    let token = match get_access_token(&cookies)? {
+    let token = match get_access_token(cookies)? {
         Some(t) => t,
         None => {
-            let refresh = get_refresh_token(&cookies)?.ok_or(AppError::Unathorized)?;
+            let refresh = get_refresh_token(cookies)?.ok_or(AppError::Unathorized)?;
 
             // TODO: remove cookies if user is None
             let user = find_user_by_id(db, &refresh.sub)

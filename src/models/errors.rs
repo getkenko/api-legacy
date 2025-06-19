@@ -3,7 +3,6 @@ use serde::Serialize;
 
 use crate::models::database::AccountState;
 
-// TODO: Print internal errors to the console
 // TODO: Use constants for validation errors
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -67,6 +66,11 @@ impl AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let code = self.status_code();
+
+        if code == StatusCode::INTERNAL_SERVER_ERROR {
+            eprintln!("ERROR: {self:?}");
+        }
+
         let body = Json(ErrorResponse {
             code: code.as_u16(),
             error: self.to_string(),

@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,7 +12,7 @@ pub enum AccountState {
     Inactive,
 }
 
-#[derive(Serialize, sqlx::Type)]
+#[derive(Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "theme_enum", rename_all = "snake_case")]
 pub enum Theme {
@@ -20,7 +20,7 @@ pub enum Theme {
     Light,
 }
 
-#[derive(Serialize, sqlx::Type)]
+#[derive(Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "language_enum", rename_all = "snake_case")]
 pub enum Language {

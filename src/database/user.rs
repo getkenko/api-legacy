@@ -101,18 +101,62 @@ pub async fn find_user_conflicts(db: &PgPool, username: &str, email: &str) -> sq
     Ok(conflicts.unwrap_or(UserConflicts::default()))
 }
 
-pub async fn insert_user(
+pub async fn insert_user_data(
     db: &PgPool,
     username: &str,
+    display_name: &str,
     email: &str,
     password: &str,
+    is_male: bool,
+    weight: f32,
+    height: i32,
+    date_of_birth: NaiveDate,
 ) -> sqlx::Result<()> {
-    sqlx::query!(
-        "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
-        username, email, password,
+    let mut tx = db.begin().await?;
+
+    // insert user
+    let user = sqlx::query!(
+        "
+        INSERT INTO users (username, display_name, email, password)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+        ",
+        username, display_name, email, password,
     )
-    .execute(db)
+    .fetch_one(&mut *tx)
     .await?;
+
+    // insert details
+    sqlx::query!(
+        "INSERT INTO user_details (user_id, is_male, weight, height, date_of_birth) VALUES ($1, $2, $3, $4, $5)",
+        user.id, is_male, weight, height, date_of_birth,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // create preferences
+    sqlx::query!(
+        "INSERT INTO user_preferences (user_id) VALUES ($1)",
+        user.id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // setup meal sections
+    sqlx::query!(
+        "
+        INSERT INTO user_meal_sections (user_id, index, label) VALUES
+        ($1, $2, $3), ($1, $4, $5), ($1, $6, $7)
+        ",
+        user.id,
+        0, "Breakfast",
+        1, "Launch",
+        2, "Dinner",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
 
     Ok(())
 }
