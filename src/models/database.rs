@@ -28,6 +28,13 @@ pub enum Language {
     Polish,
 }
 
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "meal_product_type_enum", rename_all = "snake_case")]
+pub enum MealProductKind {
+    FromDatabase,
+    QuickAdd,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,

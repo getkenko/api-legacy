@@ -1,0 +1,32 @@
+use axum::{http::StatusCode, Router};
+use chrono::NaiveDate;
+use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::models::errors::AppResult;
+
+use super::AppState;
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+}
+
+#[derive(Deserialize)]
+struct QuickAdd {
+    section_id: Uuid,
+    date: NaiveDate,
+    
+    label: String,
+    calories: i32,
+    proteins: i32,
+    fats: i32,
+    carbohydrates: i32,
+}
+
+async fn quick_add_product() -> AppResult<StatusCode> {
+    // insert row into user_meals with user_meal_sections uuid
+    // insert row into meal_items with user_meals uuid
+
+    Ok(StatusCode::CREATED)
+}
+

@@ -1,2 +1,2 @@
-CREATE TYPE meal_product_type AS ENUM
-('from_db', 'quick_add')
+CREATE TYPE meal_product_type_enum AS ENUM
+('from_database', 'quick_add')

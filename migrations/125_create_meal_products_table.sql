@@ -1,8 +1,8 @@
 CREATE TABLE meal_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    type meal_product_type NOT NULL,
+    type meal_product_type_enum NOT NULL,
 
-    -- from_db variant
+    -- from_database variant
     product_id UUID REFERENCES products(id) ON DELETE CASCADE,
 
     -- quick_add variant

@@ -2,6 +2,7 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::database::{Language, Theme};
 
@@ -64,4 +65,27 @@ pub struct NewUserDetails {
 pub struct NewUserPreferences {
     pub theme: Option<Theme>,
     pub language: Option<Language>,
+}
+
+// MEALS
+#[derive(Deserialize)]
+pub struct AddProduct {
+    pub section_id: Uuid,
+    pub date: NaiveDate,
+
+    pub product_id: Uuid,
+    pub quantity: i32,
+}
+
+#[derive(Deserialize)]
+pub struct QuickAddProduct {
+    pub section_id: Uuid,
+    pub date: NaiveDate,
+ 
+    pub label: String,
+    pub calories: i32,
+    pub proteins: i32,
+    pub fats: i32,
+    pub carbohydrates: i32,
+    pub quantity: i32,
 }

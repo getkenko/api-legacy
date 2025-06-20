@@ -41,6 +41,12 @@ pub enum AppError {
     #[error("Password requires at least 3 digits")]
     PasswordNotEnoughDigits,
 
+    // MEALS
+    #[error("Meal section with this ID not found")]
+    MealSectionNotFound,
+    #[error("Meal product with this ID not found")]
+    MealProductNotFound,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -57,6 +63,8 @@ impl AppError {
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
             Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong | Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits => StatusCode::BAD_REQUEST,
+
+            Self::MealSectionNotFound | Self::MealProductNotFound => StatusCode::NOT_FOUND,
 
             Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
