@@ -16,6 +16,7 @@ pub enum AccountState {
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "theme_enum", rename_all = "snake_case")]
 pub enum Theme {
+    System,
     Dark,
     Light,
 }
@@ -35,6 +36,14 @@ pub enum MealProductKind {
     QuickAdd,
 }
 
+#[derive(PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "measurement_system_enum", rename_all = "snake_case")]
+pub enum MeasurementSystem {
+    Metric,
+    Imperial,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -44,6 +53,28 @@ pub struct User {
     pub avatar_url: Option<String>,
     pub account_state: AccountState,
     pub created_at: DateTime<Utc>,
+}
+
+// struct containing user, user_details and user_preferences
+pub struct FullUser {
+    pub id: Uuid,
+
+    pub username: String,
+    pub display_name: String,
+    pub email: String,
+    pub password: String,
+    pub avatar_url: Option<String>,
+    pub account_state: AccountState,
+    pub created_at: DateTime<Utc>,
+
+    pub is_male: bool,
+    pub weight: f32,
+    pub height: i32,
+    pub date_of_birth: NaiveDate,
+
+    pub theme: Theme,
+    pub language: Language,
+    pub measurement_system: MeasurementSystem,
 }
 
 #[derive(Serialize)]

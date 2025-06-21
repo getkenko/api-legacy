@@ -1,7 +1,7 @@
 use axum::{extract::State, http::StatusCode, middleware, routing::{get, patch}, Extension, Json, Router};
 use sqlx::{Execute, Postgres, QueryBuilder};
 
-use crate::{database::user::fetch_user_info, models::{dto::{NewUserDetails, NewUserPreferences, UserInfo}, errors::AppResult}, utils::{auth_middleware::auth_middleware, jwt::AccessToken}};
+use crate::{database::user::fetch_full_user, models::{dto::{NewUserDetails, NewUserPreferences, FullUserView}, errors::AppResult}, utils::{auth_middleware::auth_middleware, jwt::AccessToken}};
 
 use super::AppState;
 
@@ -17,9 +17,10 @@ pub fn router(state: AppState) -> Router<AppState> {
 async fn user_info(
     State(db): State<AppState>,
     token: Extension<AccessToken>,
-) -> AppResult<Json<UserInfo>> {
-    let info = fetch_user_info(&db, &token.sub).await?;
-    Ok(Json(info))
+) -> AppResult<Json<FullUserView>> {
+    // fetch full user data and convert it to user data view
+    let user = fetch_full_user(&db, &token.sub).await?;
+    Ok(Json(user.into()))
 }
 
 async fn update_user_details(

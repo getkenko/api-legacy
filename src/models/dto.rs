@@ -1,14 +1,18 @@
 #![deny(dead_code)]
 
 use chrono::{DateTime, NaiveDate, Utc};
+use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::database::{Language, Product, Theme};
+use crate::utils::conversion::metric_height_to_imperial;
+
+use super::database::{FullUser, Language, MeasurementSystem, Product, Theme};
+
+const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
 
 // AUTH
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct LoginCredentials {
     pub email: String,
     pub password: String,
@@ -30,30 +34,60 @@ pub struct RegisterUserData {
     pub weight: f32,
     pub height: i32,
     pub date_of_birth: NaiveDate,
+    pub measurement_system: MeasurementSystem,
 }
 
 // USERS
 #[derive(Serialize)]
-pub struct UserInfo {
-    // user
+#[serde(rename_all = "camelCase")]
+pub struct FullUserView {
     pub username: String,
     pub display_name: String,
     pub email: String,
-    pub avatar_url: Option<String>,
+    pub avatar_url: String,
     pub created_at: DateTime<Utc>,
 
-    // details
     pub is_male: bool,
     pub weight: f32,
-    pub height: i32,
+    pub height: String,
     pub date_of_birth: NaiveDate,
 
-    // preferences
     pub theme: Theme,
     pub language: Language,
+    pub measurement_system: MeasurementSystem,
+}
+
+impl From<FullUser> for FullUserView {
+    fn from(user: FullUser) -> Self {
+        let avatar_url = user.avatar_url.unwrap_or(DEFAULT_AVATAR_URL.to_string());
+        let height = if user.measurement_system == MeasurementSystem::Imperial {
+            let (feet, inch) = metric_height_to_imperial(user.height);
+            format!("{feet}' {inch}\"")
+        } else {
+            user.height.to_string()
+        };
+
+        Self {
+            username: user.username,
+            display_name: user.display_name,
+            email: user.email,
+            avatar_url,
+            created_at: user.created_at,
+
+            is_male: user.is_male,
+            weight: user.weight,
+            height,
+            date_of_birth: user.date_of_birth,
+
+            theme: user.theme,
+            language: user.language,
+            measurement_system: user.measurement_system,
+        }
+    }
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NewUserDetails {
     pub is_male: Option<bool>,
     pub weight: Option<f32>,
@@ -111,6 +145,7 @@ pub struct UserMealSectionView {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AddProduct {
     pub section_id: Uuid,
     pub product_id: Uuid,
@@ -118,6 +153,7 @@ pub struct AddProduct {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct QuickAddProduct {
     pub section_id: Uuid,
     pub name: String,

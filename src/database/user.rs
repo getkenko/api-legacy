@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{database::User, dto::UserInfo};
+use crate::models::database::{FullUser, MeasurementSystem, User};
 
 pub async fn find_user_by_id(db: &PgPool, id: &Uuid) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
@@ -44,22 +44,26 @@ pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option
     Ok(user)
 }
 
-pub async fn fetch_user_info(db: &PgPool, id: &Uuid) -> sqlx::Result<UserInfo> {
+pub async fn fetch_full_user(db: &PgPool, id: &Uuid) -> sqlx::Result<FullUser> {
     let info = sqlx::query_as!(
-        UserInfo,
+        FullUser,
         r#"
         SELECT
+            u.id,
             u.username,
             u.display_name,
             u.email,
+            u.password,
             u.avatar_url,
+            u.account_state AS "account_state: _",
             u.created_at,
             ud.is_male,
             ud.weight,
             ud.height,
             ud.date_of_birth,
             up.theme AS "theme: _",
-            up.language AS "language: _"
+            up.language AS "language: _",
+            up.measurement_system AS "measurement_system: _"
         FROM users u
         INNER JOIN user_details ud ON u.id = ud.user_id
         INNER JOIN user_preferences up ON u.id = up.user_id
@@ -111,6 +115,7 @@ pub async fn insert_user_data(
     weight: f32,
     height: i32,
     date_of_birth: NaiveDate,
+    measurement_system: MeasurementSystem,
 ) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
 
@@ -136,8 +141,8 @@ pub async fn insert_user_data(
 
     // create preferences
     sqlx::query!(
-        "INSERT INTO user_preferences (user_id) VALUES ($1)",
-        user.id,
+        "INSERT INTO user_preferences (user_id, measurement_system) VALUES ($1, $2)",
+        user.id, measurement_system as _,
     )
     .execute(&mut *tx)
     .await?;
