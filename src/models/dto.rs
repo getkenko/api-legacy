@@ -4,7 +4,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::database::{Language, Theme};
+use super::database::{Language, Product, Theme};
 
 // AUTH
 #[derive(Deserialize)]
@@ -67,12 +67,52 @@ pub struct NewUserPreferences {
     pub language: Option<Language>,
 }
 
+// PRODUCTS
+#[derive(Deserialize)]
+pub struct SearchProduct {
+    pub query: String,
+}
+
 // MEALS
+#[derive(Default, Serialize)]
+pub struct MealDayMacro {
+    pub calories: i32,
+    pub proteins: i32,
+    pub fats: i32,
+    pub carbohydrates: i32,
+}
+
+impl MealDayMacro {
+    pub fn add_raw(&mut self, calories: i32, proteins: i32, fats: i32, carbohydrates: i32) {
+        self.calories += calories;
+        self.proteins += proteins;
+        self.fats += fats;
+        self.carbohydrates += carbohydrates;
+    }
+
+    pub fn add_product(&mut self, product: &Product, quantity: i32) {
+        // to get macro for this quantity from 100g:
+        // macro_for_100g * (quantity / 100)
+
+        // swaglord: not the best name but hey, at least its a closure
+        let from_quant = |val: i32| -> i32 {
+            val * (quantity / 100)
+        };
+
+        self.add_raw(from_quant(product.calories), from_quant(product.proteins), from_quant(product.fats), from_quant(product.carbohydrates));
+    }
+}
+
+#[derive(Serialize)]
+pub struct UserMealSectionView {
+    pub id: Uuid,
+    pub index: i32,
+    pub label: String,
+}
+
 #[derive(Deserialize)]
 pub struct AddProduct {
     pub section_id: Uuid,
-    pub date: NaiveDate,
-
     pub product_id: Uuid,
     pub quantity: i32,
 }
@@ -80,9 +120,7 @@ pub struct AddProduct {
 #[derive(Deserialize)]
 pub struct QuickAddProduct {
     pub section_id: Uuid,
-    pub date: NaiveDate,
- 
-    pub label: String,
+    pub name: String,
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,

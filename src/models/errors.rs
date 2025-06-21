@@ -41,6 +41,10 @@ pub enum AppError {
     #[error("Password requires at least 3 digits")]
     PasswordNotEnoughDigits,
 
+    // PRODUCTS
+    #[error("No product found")]
+    ProductNotFound,
+
     // MEALS
     #[error("Meal section with this ID not found")]
     MealSectionNotFound,
@@ -64,7 +68,7 @@ impl AppError {
 
             Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong | Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits => StatusCode::BAD_REQUEST,
 
-            Self::MealSectionNotFound | Self::MealProductNotFound => StatusCode::NOT_FOUND,
+            Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
 
             Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
