@@ -81,7 +81,7 @@ pub async fn fetch_user_meal_products_for_date(
     Ok(products)
 }
 
-pub async fn add_meal_product(db: &PgPool, add_product: AddMealProduct) -> sqlx::Result<()> {
+pub async fn add_meal_product(db: &PgPool, user_id: &Uuid, add_product: AddMealProduct) -> sqlx::Result<()> {
     // create meal product in database
     let meal_product = sqlx::query!(
         "
@@ -97,8 +97,8 @@ pub async fn add_meal_product(db: &PgPool, add_product: AddMealProduct) -> sqlx:
 
     // insert row into user_meals with user_meal_sections uuid
     let meal = sqlx::query!(
-        "INSERT INTO user_meals (section_id, date) VALUES ($1, $2) RETURNING id",
-        add_product.section_id, add_product.date,
+        "INSERT INTO user_meals (user_id, section_id, date) VALUES ($1, $2, $3) RETURNING id",
+        user_id, add_product.section_id, add_product.date,
     )
     .fetch_one(db)
     .await?;

@@ -48,6 +48,7 @@ pub fn validate_email(email: &str) -> AppResult<()> {
     Ok(())
 }
 
+// TODO: check if password contains at least one uppercase and lowercase letter
 pub fn validate_password(password: &str) -> AppResult<()> {
     // length: 8 < x < 2048
     // contains: 2 symbols, 3 digits

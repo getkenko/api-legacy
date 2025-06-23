@@ -30,7 +30,7 @@ pub enum Language {
 }
 
 #[derive(sqlx::Type)]
-#[sqlx(type_name = "meal_product_type_enum", rename_all = "snake_case")]
+#[sqlx(type_name = "meal_product_kind_enum", rename_all = "snake_case")]
 pub enum MealProductKind {
     FromDatabase,
     QuickAdd,
