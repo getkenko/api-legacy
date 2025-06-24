@@ -38,6 +38,18 @@ pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: &Uuid) -> sqlx
     Ok(product.exists)
 }
 
+pub async fn fetch_meal_product(db: &PgPool, id: &Uuid) -> sqlx::Result<MealProduct> {
+    let product = sqlx::query_as!(
+        MealProduct,
+        r#"SELECT id, kind AS "kind: _", product_id, name, calories, proteins, fats, carbohydrates FROM meal_products WHERE id = $1"#,
+        id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(product)
+}
+
 // fetches all meal products for user's date, returning vector of pair of meal product with quantity
 pub async fn fetch_user_meal_products_for_date(
     db: &PgPool,
@@ -67,14 +79,7 @@ pub async fn fetch_user_meal_products_for_date(
 
     // fetch all meal_products for this meal_items product ids
     for meal_item in meal_items {
-        let meal_product = sqlx::query_as!(
-            MealProduct,
-            r#"SELECT id, kind AS "kind: _", product_id, name, calories, proteins, fats, carbohydrates FROM meal_products WHERE id = $1"#,
-            meal_item.meal_product_id,
-        )
-        .fetch_one(db)
-        .await?;
-
+        let meal_product = fetch_meal_product(db, &meal_item.meal_product_id).await?;
         products.push((meal_product, meal_item.quantity));
     }
 

@@ -44,6 +44,14 @@ pub enum MeasurementSystem {
     Imperial,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WeightGoal {
+    Gain,
+    Lose,
+    Maintain,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,

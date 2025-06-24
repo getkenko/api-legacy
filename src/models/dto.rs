@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::utils::conversion::metric_height_to_imperial;
 
-use super::database::{FullUser, Language, MeasurementSystem, Product, Theme};
+use super::database::{FullUser, Language, MeasurementSystem, Product, Theme, WeightGoal};
 
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
 
@@ -35,6 +35,10 @@ pub struct RegisterUserData {
     pub height: i32,
     pub date_of_birth: NaiveDate,
     pub measurement_system: MeasurementSystem,
+    pub idle_activity: i32,
+    pub workout_activity: i32,
+    pub weight_goal: WeightGoal,
+    pub goal_diff_per_week: f32,
 }
 
 // USERS
