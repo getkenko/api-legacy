@@ -1,68 +1,38 @@
-use axum::{body::Body, extract::State, http::Request, middleware::Next, response::IntoResponse};
-use axum_extra::extract::CookieJar;
-use sqlx::PgPool;
+use axum::{body::Body, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
 
-use crate::{database::user::find_user_by_id, models::errors::{AppError, AppResult}, routes::AppState, utils::jwt::{AccessToken, AuthToken, RefreshToken}};
-
-// JWT AUTH MIDDLEWARE
-fn get_access_token(cookies: &CookieJar) -> Result<Option<AccessToken>, jsonwebtoken::errors::Error> {
-    let cookie = cookies.get("access").map(|c| c.value());
-    if let Some(value) = cookie {
-        let token = AccessToken::decode(value)?;
-        return Ok(token);
-    }
-
-    Ok(None)
-}
-
-fn get_refresh_token(cookies: &CookieJar) -> Result<Option<RefreshToken>, jsonwebtoken::errors::Error> {
-    let cookie = cookies
-        .get("refresh")
-        .map(|c| c.value());
-
-    if let Some(value) = cookie {
-        let token = RefreshToken::decode(value)?;
-        return Ok(token);
-    }
-
-    Ok(None)
-}
-
-async fn authorize_user(db: &PgPool, cookies: &CookieJar) -> AppResult<AccessToken> {
-    let token = match get_access_token(cookies)? {
-        Some(t) => t,
-        None => {
-            let refresh = get_refresh_token(cookies)?.ok_or(AppError::Unathorized)?;
-
-            // TODO: remove cookies if user is None
-            let user = find_user_by_id(db, &refresh.sub)
-                .await?
-                .ok_or(AppError::Unathorized)?;
-
-            AccessToken::new(&refresh.sub, &user.display_name)
-        }
-    };
-
-    Ok(token)
-}
+use crate::{models::errors::{AppError, AppResult}, security::jwt::Token};
 
 pub async fn auth_middleware(
-    State(db): State<AppState>,
-    cookies: CookieJar,
     mut req: Request<Body>,
     next: Next,
 ) -> AppResult<impl IntoResponse> {
-    let token = authorize_user(&db, &cookies).await?;
+    // try to extract authorization header data
+    let auth_header = req
+        .headers()
+        .get(AUTHORIZATION)
+        .map(|h| h.to_str())
+        .ok_or(AppError::Unathorized)?
+        .map_err(|_| AppError::TokenInvalidSymbols)?;
 
+    // strip bearer prefix
+    let token_str = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(AppError::InvalidAuthFormat)?;
+
+    // try to decode token from data
+    let token = Token::decode(token_str)?
+        .ok_or(AppError::Unathorized)?;
+
+    // insert token and resume request
     req.extensions_mut().insert(token);
-
     let res = next.run(req).await;
+    
     Ok(res)
 }
 
 // RATE LIMIT MIDDLEWARE
 pub async fn rate_limit_middleware(
-    mut req: Request<Body>,
+    req: Request<Body>,
     next: Next,
 ) -> AppResult<impl IntoResponse> {
     // create user unique id using MAC + IP

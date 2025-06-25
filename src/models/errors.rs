@@ -11,6 +11,10 @@ pub type AppResult<T> = Result<T, AppError>;
 pub enum AppError {
     #[error("You need to be signed in to access this resource")]
     Unathorized,
+    #[error("Failed to parse authorization token because it contains invalid symbols")]
+    TokenInvalidSymbols,
+    #[error("Invalid authorization header format, does it begin with 'Bearer '?")]
+    InvalidAuthFormat,
 
     // AUTH
     #[error("Invalid email and password combination")]
@@ -76,7 +80,8 @@ impl AppError {
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
             Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |
-            Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) => StatusCode::BAD_REQUEST,
+            Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
+            Self::TokenInvalidSymbols | Self::InvalidAuthFormat => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
 

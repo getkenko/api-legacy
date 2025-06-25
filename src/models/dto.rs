@@ -21,8 +21,7 @@ pub struct LoginCredentials {
 
 #[derive(Serialize)]
 pub struct LoginResponse {
-    pub access: String,
-    pub refresh: String,
+    pub token: String,
 }
 
 #[derive(Deserialize)]

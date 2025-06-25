@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-use crate::{database::user::{find_user_by_email, find_user_conflicts, insert_user_data}, models::{database::AccountState, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, utils::{jwt::{AccessToken, AuthToken, RefreshToken}, password::{hash_password, verify_password}, validation::{validate_email, validate_password, validate_username}}};
+use crate::{database::user::{find_user_by_email, find_user_conflicts, insert_user_data}, models::{database::AccountState, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::jwt::Token, utils::{password::{hash_password, verify_password}, validation::{validate_email, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<LoginResponse> {
     // try to find the user
@@ -17,16 +17,10 @@ pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<Lo
         return Err(AppError::AccountNotActive(user.account_state));
     }
 
-    // create auth tokens
-    let access = AccessToken::new(&user.id, &user.display_name);
-    let refresh = RefreshToken::new(&user.id);
+    // create auth token
+    let token = Token::new(user.id, user.display_name, user.email).encode()?;
 
-    let tokens = LoginResponse {
-        access: access.encode()?,
-        refresh: refresh.encode()?,
-    };
-
-    Ok(tokens)
+    Ok(LoginResponse { token })
 }
 
 pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppResult<()> {

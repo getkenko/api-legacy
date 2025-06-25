@@ -3,11 +3,11 @@ use chrono::NaiveDate;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_meal_product, fetch_user_meal_products_for_date, fetch_user_meal_section_exists, fetch_user_meal_sections}, product::fetch_product_by_id}, models::{database::{AddMealProduct, MealProductKind}, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealSectionView}, errors::{AppError, AppResult}}, security::middlewares::auth_middleware, utils::jwt::AccessToken};
+use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_meal_product, fetch_user_meal_products_for_date, fetch_user_meal_section_exists, fetch_user_meal_sections}, product::fetch_product_by_id}, models::{database::{AddMealProduct, MealProductKind}, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
-pub fn router(state: AppState) -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/sections", get(user_sections))
         .route("/products/{product_id}", delete(delete_meal_product))
@@ -16,12 +16,12 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/{date}/products", post(add_product))
         .route("/{date}/products/quick", post(quick_add_product)) // should we instead use query parameter in /products?
 
-        .layer(middleware::from_fn_with_state(state, auth_middleware))
+        .layer(middleware::from_fn(auth_middleware))
 }
 
 async fn meal_macro(
     State(db): State<AppState>,
-    Extension(token): Extension<AccessToken>,
+    Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
 ) -> AppResult<Json<MealDayMacro>> {
     let mut macro_sum = MealDayMacro::default();
@@ -76,7 +76,7 @@ struct UserMeals {
 
 async fn user_meals(
     State(db): State<AppState>,
-    Extension(token): Extension<AccessToken>,
+    Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
 ) -> AppResult<Json<Vec<UserMeals>>> {
     let mut res = vec![];
@@ -123,7 +123,7 @@ async fn user_meals(
 // sections
 async fn user_sections(
     State(db): State<AppState>,
-    Extension(token): Extension<AccessToken>,
+    Extension(token): Extension<Token>,
 ) -> AppResult<Json<Vec<UserMealSectionView>>> {
     let sections = fetch_user_meal_sections(&db, &token.sub).await?;
     Ok(Json(sections))
@@ -132,7 +132,7 @@ async fn user_sections(
 // products
 async fn add_product(
     State(db): State<AppState>,
-    Extension(token): Extension<AccessToken>,
+    Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<AddProduct>,
 ) -> AppResult<StatusCode> {
@@ -149,7 +149,7 @@ async fn add_product(
 
 async fn quick_add_product(
     State(db): State<AppState>,
-    Extension(token): Extension<AccessToken>,
+    Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<QuickAddProduct>,
 ) -> AppResult<StatusCode> {

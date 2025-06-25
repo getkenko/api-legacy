@@ -4,26 +4,6 @@ use uuid::Uuid;
 
 use crate::models::database::{FullUser, MeasurementSystem, User, DietKind, UserOrigin, WeightGoal};
 
-pub async fn find_user_by_id(db: &PgPool, id: &Uuid) -> sqlx::Result<Option<User>> {
-    let user = sqlx::query_as!(
-        User,
-        r#"
-        SELECT
-            id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
-        FROM
-            users
-        WHERE
-            id = $1
-        LIMIT 1
-        "#,
-        id,
-    )
-    .fetch_optional(db)
-    .await?;
-
-    Ok(user)
-}
-
 pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
         User,

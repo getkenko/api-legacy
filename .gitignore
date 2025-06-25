@@ -3,3 +3,6 @@
 
 public/avatars/*
 !public/avatars/default.jpg
+
+keys/*
+!keys/generate.sh
