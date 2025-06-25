@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// ENUMS
 #[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type, strum_macros::Display)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "account_state_enum", rename_all = "snake_case")]
@@ -44,14 +45,40 @@ pub enum MeasurementSystem {
     Imperial,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "weight_goal_enum", rename_all = "snake_case")]
 pub enum WeightGoal {
     Gain,
     Lose,
     Maintain,
 }
 
+#[derive(Deserialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "user_origin_enum", rename_all = "lowercase")]
+pub enum UserOrigin {
+    Instagram,
+    TikTok,
+    Twitter,
+    Twitch,
+    Facebook,
+    YouTube,
+    Other,
+}
+
+#[derive(Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "user_diet_enum", rename_all = "snake_case")]
+pub enum DietKind {
+    Vegetarian,
+    Vegan,
+    Pescatarian,
+    Ketogenic,
+    Classic,
+}
+
+// STRUCTS
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -79,10 +106,16 @@ pub struct FullUser {
     pub weight: f32,
     pub height: i32,
     pub date_of_birth: NaiveDate,
+    pub idle_activity: i32,
+    pub workout_activity: i32,
+    pub diet_kind: DietKind,
 
     pub theme: Theme,
     pub language: Language,
     pub measurement_system: MeasurementSystem,
+
+    pub weight_goal: WeightGoal,
+    pub goal_diff_per_week: f32,
 }
 
 #[derive(Serialize)]

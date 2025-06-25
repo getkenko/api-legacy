@@ -1,11 +1,14 @@
 mod models;
 mod utils;
+mod security;
 mod database;
 mod services;
 mod routes;
 
+use axum::extract::DefaultBodyLimit;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
+use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, services::ServeDir};
 
 #[tokio::main]
 async fn main() {
@@ -23,7 +26,14 @@ async fn main() {
     println!("Connection with database established");
 
     // setup axum web server
-    let router = routes::router(db);
+    let router = routes::router(db)
+        .nest_service("/public", ServeDir::new("public"))
+        .layer((
+            DefaultBodyLimit::disable(),
+            RequestBodyLimitLayer::new(10_485_760),
+            // TODO: set strict cors only for official website before production
+            CorsLayer::very_permissive(),
+        ));
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     println!("API available at http://{}", listener.local_addr().unwrap());
 

@@ -1,7 +1,9 @@
-use axum::{extract::State, http::StatusCode, middleware, routing::{get, patch}, Extension, Json, Router};
-use sqlx::{Execute, Postgres, QueryBuilder};
+use axum::{extract::{Multipart, State}, http::StatusCode, middleware, routing::{get, patch, post}, Extension, Json, Router};
+use sqlx::{Postgres, QueryBuilder};
+use tokio::{fs::File, io::AsyncWriteExt};
+use uuid::Uuid;
 
-use crate::{database::user::fetch_full_user, models::{dto::{NewUserDetails, NewUserPreferences, FullUserView}, errors::AppResult}, utils::{auth_middleware::auth_middleware, jwt::AccessToken}};
+use crate::{database::user::fetch_full_user, models::{dto::{FullUserView, NewUserDetails, NewUserPreferences}, errors::{AppError, AppResult}}, security::middlewares::auth_middleware, utils::jwt::AccessToken};
 
 use super::AppState;
 
@@ -10,6 +12,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/me", get(user_info))
         .route("/me/details", patch(update_user_details))
         .route("/me/preferences", patch(update_user_preferences))
+        .route("/me/avatar", post(update_avatar).delete(delete_avatar))
 
         .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
@@ -20,7 +23,9 @@ async fn user_info(
 ) -> AppResult<Json<FullUserView>> {
     // fetch full user data and convert it to user data view
     let user = fetch_full_user(&db, &token.sub).await?;
-    Ok(Json(user.into()))
+    // i could use .into() but explicitly converting makes the code more readable
+    let user_view = FullUserView::from(user);
+    Ok(Json(user_view))
 }
 
 async fn update_user_details(
@@ -36,33 +41,29 @@ async fn update_user_details(
     let mut separated = builder.separated(", ");
 
     if let Some(is_male) = new_details.is_male {
-        separated.push_unseparated("is_male = ");
-        separated.push_bind(is_male);
+        separated.push("is_male = ");
+        separated.push_bind_unseparated(is_male);
     }
 
     if let Some(weight) = new_details.weight {
-        separated.push_unseparated("weight = ");
-        separated.push_bind(weight);
+        separated.push("weight = ");
+        separated.push_bind_unseparated(weight);
     }
 
     if let Some(height) = new_details.height {
-        separated.push_unseparated("height = ");
-        separated.push_bind(height);
+        separated.push("height = ");
+        separated.push_bind_unseparated(height);
     }
 
     if let Some(date_of_birth) = new_details.date_of_birth {
-        separated.push_unseparated("date_of_birth = ");
-        separated.push_bind(date_of_birth);
+        separated.push("date_of_birth = ");
+        separated.push_bind_unseparated(date_of_birth);
     }
 
-    builder.push(" WHERE id = ");
+    builder.push(" WHERE user_id = ");
     builder.push_bind(token.sub);
 
-    let query = builder.build().sql();
-
-    println!("{query}");
-
-    // sqlx::query(query).execute(&db).await?;
+    builder.build().execute(&db).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -80,18 +81,67 @@ async fn update_user_preferences(
     let mut separated = builder.separated(", ");
 
     if let Some(is_male) = new_pref.theme {
-        separated.push_unseparated("is_male = ");
-        separated.push_bind(is_male);
+        separated.push("is_male = ");
+        separated.push_bind_unseparated(is_male);
     }
 
     if let Some(weight) = new_pref.language {
-        separated.push_unseparated("weight = ");
-        separated.push_bind(weight);
+        separated.push("weight = ");
+        separated.push_bind_unseparated(weight);
     }
 
-    let query = builder.build().sql();
+    builder.push(" WHERE user_id = ");
+    builder.push_bind(token.sub);
 
-    sqlx::query(query).execute(&db).await?;
+    builder.build().execute(&db).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn update_avatar(
+    State(db): State<AppState>,
+    token: Extension<AccessToken>,
+    mut multipart: Multipart,
+) -> AppResult<()> {
+    while let Some(field) = multipart.next_field().await? {
+        if field.name() == Some("avatar") {
+            let data = field.bytes().await?;
+            let mime = infer::get(&data).ok_or(AppError::UnknownFileType)?;
+
+            // check if it's accepted image format
+            if mime.mime_type() != "image/png" && mime.mime_type() != "image/jpeg" {
+                return Err(AppError::UnknownFileType)?;
+            }
+
+            // create file name
+            let file_name = format!("{}.{}", Uuid::new_v4(), mime.extension());
+            let image_path = format!("avatars/{file_name}"); // used in CDN url
+            let file_path = format!("public/{image_path}"); // full file path with CDN directory
+
+            // save to disk
+            let mut file = File::create(file_path).await?;
+            file.write_all(&data).await?;
+
+            // update user's avatar in database
+            sqlx::query!(
+                "UPDATE users SET avatar_url = $1 WHERE id = $2",
+                image_path, token.sub,
+            )
+            .execute(&db)
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn delete_avatar(
+    State(db): State<AppState>,
+    token: Extension<AccessToken>,
+) -> AppResult<StatusCode> {
+    sqlx::query!("UPDATE users SET avatar_url = NULL WHERE id = $1", token.sub)
+        .execute(&db)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

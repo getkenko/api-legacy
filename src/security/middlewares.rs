@@ -4,6 +4,7 @@ use sqlx::PgPool;
 
 use crate::{database::user::find_user_by_id, models::errors::{AppError, AppResult}, routes::AppState, utils::jwt::{AccessToken, AuthToken, RefreshToken}};
 
+// JWT AUTH MIDDLEWARE
 fn get_access_token(cookies: &CookieJar) -> Result<Option<AccessToken>, jsonwebtoken::errors::Error> {
     let cookie = cookies.get("access").map(|c| c.value());
     if let Some(value) = cookie {
@@ -54,6 +55,20 @@ pub async fn auth_middleware(
     let token = authorize_user(&db, &cookies).await?;
 
     req.extensions_mut().insert(token);
+
+    let res = next.run(req).await;
+    Ok(res)
+}
+
+// RATE LIMIT MIDDLEWARE
+pub async fn rate_limit_middleware(
+    mut req: Request<Body>,
+    next: Next,
+) -> AppResult<impl IntoResponse> {
+    // create user unique id using MAC + IP
+    // (using just IP will make the API unreachable for VPN users)
+    // increase requests in last 60 seconds in redis
+    // if req / min is above the threshold then return rate limited error
 
     let res = next.run(req).await;
     Ok(res)

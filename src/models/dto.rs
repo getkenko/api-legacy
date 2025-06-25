@@ -5,10 +5,11 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::conversion::metric_height_to_imperial;
+use crate::{models::database::{DietKind, UserOrigin}, utils::conversion::metric_height_to_imperial};
 
 use super::database::{FullUser, Language, MeasurementSystem, Product, Theme, WeightGoal};
 
+const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
 
 // AUTH
@@ -39,6 +40,8 @@ pub struct RegisterUserData {
     pub workout_activity: i32,
     pub weight_goal: WeightGoal,
     pub goal_diff_per_week: f32,
+    pub diet_kind: DietKind,
+    pub origin: UserOrigin,
 }
 
 // USERS
@@ -55,6 +58,7 @@ pub struct FullUserView {
     pub weight: f32,
     pub height: String,
     pub date_of_birth: NaiveDate,
+    pub diet_kind: DietKind,
 
     pub theme: Theme,
     pub language: Language,
@@ -75,13 +79,14 @@ impl From<FullUser> for FullUserView {
             username: user.username,
             display_name: user.display_name,
             email: user.email,
-            avatar_url,
+            avatar_url: format!("{CDN_URL}/{avatar_url}"),
             created_at: user.created_at,
 
             is_male: user.is_male,
             weight: user.weight,
             height,
             date_of_birth: user.date_of_birth,
+            diet_kind: user.diet_kind,
 
             theme: user.theme,
             language: user.language,

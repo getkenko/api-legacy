@@ -3,7 +3,8 @@ CREATE TABLE user_details (
     is_male BOOL NOT NULL,
     weight FLOAT4 NOT NULL,
     height INT NOT NULL,
-    date_of_birth DATE NOT NULL
-    --activity_with_workouts
-    --activity_without_workouts
+    date_of_birth DATE NOT NULL,
+    idle_activity INT NOT NULL,
+    workout_activity INT NOT NULL,
+    diet_kind diet_kind_enum NOT NULL
 )

@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, response::{IntoResponse, Response}, Json};
+use axum::{extract::multipart, http::StatusCode, response::{IntoResponse, Response}, Json};
 use serde::Serialize;
 
 use crate::models::database::AccountState;
@@ -17,11 +17,12 @@ pub enum AppError {
     InvalidCredentials,
     #[error("Your account is {0}")]
     AccountNotActive(AccountState),
-
     #[error("This username is already taken")]
     UsernameTaken,
     #[error("This email address is already linked to an existing account")]
     EmailTaken,
+    #[error("{0} activity has an invalid value, it must be between 1 and 5")]
+    ActivityNotInRange(String),
 
     // VALIDATION
     #[error("Bad username length! It must be between 4 and 16")]
@@ -51,6 +52,10 @@ pub enum AppError {
     #[error("Meal product with this ID not found")]
     MealProductNotFound,
 
+    // USERS
+    #[error("Unknown file type uploaded, only JPEG and PNG files are accepted")]
+    UnknownFileType,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -58,6 +63,10 @@ pub enum AppError {
     Crypto(argon2::password_hash::Error),
     #[error("Internal jwt error")]
     Jwt(#[from] jsonwebtoken::errors::Error),
+    #[error("Internal error when receiving multipart form")]
+    Multipart(#[from] multipart::MultipartError),
+    #[error("Internal I/O error occured")]
+    Io(#[from] std::io::Error),
 }
 
 impl AppError {
@@ -66,11 +75,12 @@ impl AppError {
             Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
 
-            Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong | Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits => StatusCode::BAD_REQUEST,
+            Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |
+            Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
 
-            Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Io(_) | Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

@@ -3,7 +3,7 @@ use chrono::NaiveDate;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{database::{meal::{self, add_meal_product, check_meal_item_exists, delete_meal_item, fetch_meal_product, fetch_user_meal_products_for_date, fetch_user_meal_section_exists, fetch_user_meal_sections}, product::fetch_product_by_id}, models::{database::{AddMealProduct, MealProductKind}, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealSectionView}, errors::{AppError, AppResult}}, utils::{auth_middleware::auth_middleware, jwt::AccessToken}};
+use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_meal_product, fetch_user_meal_products_for_date, fetch_user_meal_section_exists, fetch_user_meal_sections}, product::fetch_product_by_id}, models::{database::{AddMealProduct, MealProductKind}, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealSectionView}, errors::{AppError, AppResult}}, security::middlewares::auth_middleware, utils::jwt::AccessToken};
 
 use super::AppState;
 

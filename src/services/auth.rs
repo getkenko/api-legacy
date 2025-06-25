@@ -41,6 +41,13 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
         return Err(AppError::EmailTaken);
     }
 
+    // check if idle activity and workout activity are in the range (1-5)
+    if user_data.idle_activity < 1 || user_data.idle_activity > 5 {
+        return Err(AppError::ActivityNotInRange("Idle".to_string()));
+    } else if user_data.workout_activity < 1 || user_data.workout_activity > 5 {
+        return Err(AppError::ActivityNotInRange("Workout".to_string()));
+    }
+
     let password = hash_password(&user_data.password).map_err(AppError::Crypto)?;
 
     insert_user_data(
@@ -53,7 +60,13 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
         user_data.weight,
         user_data.height,
         user_data.date_of_birth,
+        user_data.idle_activity,
+        user_data.workout_activity,
         user_data.measurement_system,
+        user_data.weight_goal,
+        user_data.goal_diff_per_week,
+        user_data.diet_kind,
+        user_data.origin,
     ).await?;
 
     Ok(())
