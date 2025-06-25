@@ -2,31 +2,44 @@ mod models;
 mod utils;
 mod security;
 mod database;
+mod cache;
 mod services;
 mod routes;
 
+use std::net::SocketAddr;
+
+use dotenvy_macro::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 
-#[tokio::main]
-async fn main() {
-    // load .env variables
-    dotenvy::dotenv().unwrap();
-    let db_url = dotenvy::var("DATABASE_URL").unwrap();
-    println!("Environment variables loaded");
+use crate::cache::Cache;
 
+// TODO: custom extractors for database/cache
+
+const DATABASE_URL: &str = dotenv!("DATABASE_URL");
+const REDIS_URL: &str = dotenv!("REDIS_URL");
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     // initialize database connection
     let db = PgPoolOptions::new()
         .max_connections(10)
-        .connect(&db_url)
-        .await
-        .unwrap();
+        .connect(DATABASE_URL)
+        .await?;
     println!("Connection with database established");
 
-    // setup axum web server
-    let router = routes::router(db);
-    let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    println!("API available at http://{}", listener.local_addr().unwrap());
+    // initialize redis connection
+    let cache = Cache::new(REDIS_URL).await?;
+    println!("Connection with redis established");
 
-    axum::serve(listener, router).await.unwrap();
+    // setup axum web server
+    let router = routes::router(db, cache)
+        .into_make_service_with_connect_info::<SocketAddr>(); // so we can extract client's remote address
+
+    let listener = TcpListener::bind("127.0.0.1:3000").await?;
+    println!("API available at http://{}", listener.local_addr()?);
+
+    axum::serve(listener, router).await?;
+
+    Ok(())
 }

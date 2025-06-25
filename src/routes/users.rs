@@ -18,18 +18,18 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn user_info(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<FullUserView>> {
     // fetch full user data and convert it to user data view
-    let user = fetch_full_user(&db, &token.sub).await?;
+    let user = fetch_full_user(&state.db, &token.sub).await?;
     // i could use .into() but explicitly converting makes the code more readable
     let user_view = FullUserView::from(user);
     Ok(Json(user_view))
 }
 
 async fn update_user_details(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     new_details: Json<NewUserDetails>,
 ) -> AppResult<StatusCode> {
@@ -63,13 +63,13 @@ async fn update_user_details(
     builder.push(" WHERE user_id = ");
     builder.push_bind(token.sub);
 
-    builder.build().execute(&db).await?;
+    builder.build().execute(&state.db).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 async fn update_user_preferences(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Json(new_pref): Json<NewUserPreferences>,
 ) -> AppResult<StatusCode> {
@@ -93,13 +93,13 @@ async fn update_user_preferences(
     builder.push(" WHERE user_id = ");
     builder.push_bind(token.sub);
 
-    builder.build().execute(&db).await?;
+    builder.build().execute(&state.db).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 async fn update_avatar(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     mut multipart: Multipart,
 ) -> AppResult<()> {
@@ -127,7 +127,7 @@ async fn update_avatar(
                 "UPDATE users SET avatar_url = $1 WHERE id = $2",
                 image_path, token.sub,
             )
-            .execute(&db)
+            .execute(&state.db)
             .await?;
         }
     }
@@ -136,11 +136,11 @@ async fn update_avatar(
 }
 
 async fn delete_avatar(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<StatusCode> {
     sqlx::query!("UPDATE users SET avatar_url = NULL WHERE id = $1", token.sub)
-        .execute(&db)
+        .execute(&state.db)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)

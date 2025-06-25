@@ -11,17 +11,17 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn login(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Json(creds): Json<LoginCredentials>,
 ) -> AppResult<Json<LoginResponse>> {
-    let res = process_login(&db, creds).await?;
+    let res = process_login(&state.db, creds).await?;
     Ok(Json(res))
 }
 
 async fn register(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Json(user_data): Json<RegisterUserData>,
 ) -> AppResult<StatusCode> {
-    process_register(&db, user_data).await?;
+    process_register(&state.db, user_data).await?;
     Ok(StatusCode::CREATED)
 }

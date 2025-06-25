@@ -20,12 +20,12 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn meal_macro(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
 ) -> AppResult<Json<MealDayMacro>> {
     let mut macro_sum = MealDayMacro::default();
-    let products = fetch_user_meal_products_for_date(&db, &token.sub, date).await?;
+    let products = fetch_user_meal_products_for_date(&state.db, &token.sub, date).await?;
 
     for (product, quantity) in products {
         match product.kind {
@@ -33,7 +33,7 @@ async fn meal_macro(
                 // database already makes sure that these fields are set when kind is quick add
                 macro_sum.add_raw(product.calories.unwrap(), product.proteins.unwrap(), product.fats.unwrap(), product.carbohydrates.unwrap()),
             MealProductKind::FromDatabase => {
-                let product = fetch_product_by_id(&db, product.product_id.unwrap()).await?;
+                let product = fetch_product_by_id(&state.db, product.product_id.unwrap()).await?;
                 macro_sum.add_product(&product, quantity);
             }
         }
@@ -75,7 +75,7 @@ struct UserMeals {
 }
 
 async fn user_meals(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
 ) -> AppResult<Json<Vec<UserMeals>>> {
@@ -86,7 +86,7 @@ async fn user_meals(
         "SELECT id, section_id FROM user_meals WHERE user_id = $1 AND date = $2",
         token.sub, date,
     )
-    .fetch_all(&db)
+    .fetch_all(&state.db)
     .await?;
 
     for meal in meals {
@@ -97,16 +97,16 @@ async fn user_meals(
             "SELECT meal_product_id, quantity FROM meal_items WHERE meal_id = $1",
             meal.id,
         )
-        .fetch_all(&db)
+        .fetch_all(&state.db)
         .await?;
 
         for item in items {
-            let mp = fetch_meal_product(&db, &item.meal_product_id).await?;
+            let mp = fetch_meal_product(&state.db, &item.meal_product_id).await?;
 
             let product = match mp.kind {
                 MealProductKind::QuickAdd => UserMealsProducts::new(None, mp.name.unwrap(), mp.calories.unwrap(), mp.proteins.unwrap(), mp.fats.unwrap(), mp.carbohydrates.unwrap()),
                 MealProductKind::FromDatabase => {
-                    let p = fetch_product_by_id(&db, mp.product_id.unwrap()).await?;
+                    let p = fetch_product_by_id(&state.db, mp.product_id.unwrap()).await?;
                     UserMealsProducts::new(Some(p.id), p.name, p.calories, p.proteins, p.fats, p.carbohydrates)
                 }
             };
@@ -122,57 +122,57 @@ async fn user_meals(
 
 // sections
 async fn user_sections(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<Vec<UserMealSectionView>>> {
-    let sections = fetch_user_meal_sections(&db, &token.sub).await?;
+    let sections = fetch_user_meal_sections(&state.db, &token.sub).await?;
     Ok(Json(sections))
 }
 
 // products
 async fn add_product(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<AddProduct>,
 ) -> AppResult<StatusCode> {
-    let section_exists = fetch_user_meal_section_exists(&db, &product.section_id).await?;
+    let section_exists = fetch_user_meal_section_exists(&state.db, &product.section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
     }
 
     let add_product = AddMealProduct::from_database(date, product.section_id, product.quantity, product.product_id);
-    add_meal_product(&db, &token.sub, add_product).await?;
+    add_meal_product(&state.db, &token.sub, add_product).await?;
 
     Ok(StatusCode::CREATED)
 }
 
 async fn quick_add_product(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<QuickAddProduct>,
 ) -> AppResult<StatusCode> {
-    let section_exists = fetch_user_meal_section_exists(&db, &product.section_id).await?;
+    let section_exists = fetch_user_meal_section_exists(&state.db, &product.section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
     }
 
     let add_product = AddMealProduct::quick_add(date, product.section_id, product.quantity, product.name, product.calories, product.proteins, product.fats, product.carbohydrates);
-    add_meal_product(&db, &token.sub, add_product).await?;
+    add_meal_product(&state.db, &token.sub, add_product).await?;
 
     Ok(StatusCode::CREATED)
 }
 
 async fn delete_meal_product(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Path(meal_product_id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    if !check_meal_item_exists(&db, &meal_product_id).await? {
+    if !check_meal_item_exists(&state.db, &meal_product_id).await? {
         return Err(AppError::MealProductNotFound);
     }
 
-    delete_meal_item(&db, &meal_product_id).await?;
+    delete_meal_item(&state.db, &meal_product_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

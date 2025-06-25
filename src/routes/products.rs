@@ -11,18 +11,18 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn search_products(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Query(search): Query<SearchProduct>,
 ) -> AppResult<Json<Vec<Product>>> {
-    let products = fetch_products_with_query(&db, &search.query).await?;
+    let products = fetch_products_with_query(&state.db, &search.query).await?;
     Ok(Json(products))
 }
 
 async fn find_product(
-    State(db): State<AppState>,
+    State(state): State<AppState>,
     Path(barcode): Path<i32>,
 ) -> AppResult<Json<Product>> {
-    let product = find_product_by_barcode(&db, barcode)
+    let product = find_product_by_barcode(&state.db, barcode)
         .await?
         .ok_or(AppError::ProductNotFound)?;
 

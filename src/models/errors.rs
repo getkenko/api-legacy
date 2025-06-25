@@ -9,12 +9,15 @@ pub type AppResult<T> = Result<T, AppError>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
+    // MIDDLEWARES
     #[error("You need to be signed in to access this resource")]
     Unathorized,
     #[error("Failed to parse authorization token because it contains invalid symbols")]
     TokenInvalidSymbols,
     #[error("Invalid authorization header format, does it begin with 'Bearer '?")]
     InvalidAuthFormat,
+    #[error("You are being rate limited")]
+    RateLimit,
 
     // AUTH
     #[error("Invalid email and password combination")]
@@ -63,6 +66,8 @@ pub enum AppError {
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
+    #[error("Internal redis error")]
+    Redis(#[from] redis::RedisError),
     #[error("Internal cryptographic error")]
     Crypto(argon2::password_hash::Error),
     #[error("Internal jwt error")]
@@ -78,6 +83,7 @@ impl AppError {
         match self {
             Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
+            Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
 
             Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |
             Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
@@ -85,7 +91,7 @@ impl AppError {
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
 
-            Self::Io(_) | Self::Database(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

@@ -1,6 +1,11 @@
-use axum::{body::Body, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
+use std::net::SocketAddr;
 
-use crate::{models::errors::{AppError, AppResult}, security::jwt::Token};
+use axum::{body::Body, extract::{ConnectInfo, State}, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
+
+use crate::{models::errors::{AppError, AppResult}, routes::AppState, security::jwt::Token};
+
+// TODO: move to config file
+const MAX_REQUESTS_PER_MINUTE: u32 = 100;
 
 pub async fn auth_middleware(
     mut req: Request<Body>,
@@ -32,13 +37,25 @@ pub async fn auth_middleware(
 
 // RATE LIMIT MIDDLEWARE
 pub async fn rate_limit_middleware(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    State(state): State<AppState>,
     req: Request<Body>,
     next: Next,
 ) -> AppResult<impl IntoResponse> {
-    // create user unique id using MAC + IP
-    // (using just IP will make the API unreachable for VPN users)
-    // increase requests in last 60 seconds in redis
-    // if req / min is above the threshold then return rate limited error
+    // TODO: create unique identifier based on something more than IP address-
+    //-so VPN users wont get rate limited by activity of others (use xxHash for keys)
+
+    // create unique identifier
+    let ip = addr.ip().to_string();
+    let key = format!("ratelimit_{ip}");
+
+    // increase request count for identifier
+    let req_min = state.cache.increment_requests(&key).await?;
+
+    // if req/min is above the threshold then return rate limit
+    if req_min > MAX_REQUESTS_PER_MINUTE {
+        return Err(AppError::RateLimit);
+    }
 
     let res = next.run(req).await;
     Ok(res)

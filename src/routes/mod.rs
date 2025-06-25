@@ -7,11 +7,17 @@ use axum::{extract::DefaultBodyLimit, middleware, Router};
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, services::ServeDir};
 
-use crate::security::middlewares::rate_limit_middleware;
+use crate::{cache::Cache, security::middlewares::rate_limit_middleware};
 
-pub type AppState = PgPool;
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+    pub cache: Cache,
+}
 
-pub fn router(db: PgPool) -> Router {
+pub fn router(db: PgPool, cache: Cache) -> Router {
+    let state = AppState { db, cache };
+
     Router::new()
         .nest("/auth", auth::router())
         .nest("/users", users::router())
@@ -19,9 +25,9 @@ pub fn router(db: PgPool) -> Router {
         .nest("/meals", meals::router())
         .nest_service("/public", ServeDir::new("public"))
 
-        .with_state(db)
+        .with_state(state.clone())
         .layer((
-            middleware::from_fn(rate_limit_middleware),
+            middleware::from_fn_with_state(state, rate_limit_middleware),
             DefaultBodyLimit::disable(),
             RequestBodyLimitLayer::new(10_485_760),
             // TODO: set strict cors before production

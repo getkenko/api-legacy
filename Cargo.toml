@@ -8,6 +8,7 @@ tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
 axum = { version = "0.8", features = ["tracing", "multipart"] }
 tower-http = { version = "0.6", default-features = false, features = ["cors", "fs", "limit"] }
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "bigdecimal"] }
+redis = { version = "0.32", features = ["tokio-comp"] }
 
 jsonwebtoken = "9.3"
 argon2 = "0.5"
@@ -18,7 +19,8 @@ regex = "1.11"
 strum = "0.27"
 strum_macros = "0.27"
 serde = { version = "1.0", features = ["derive"] }
-dotenvy = "0.15"
 dotenvy_macro = "0.15"
 thiserror = "2.0"
 infer = "0.19"
+
+anyhow = "1.0"
