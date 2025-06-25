@@ -69,7 +69,7 @@ pub enum UserOrigin {
 
 #[derive(Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
-#[sqlx(type_name = "user_diet_enum", rename_all = "snake_case")]
+#[sqlx(type_name = "diet_kind_enum", rename_all = "snake_case")]
 pub enum DietKind {
     Vegetarian,
     Vegan,
