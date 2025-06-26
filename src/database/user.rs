@@ -176,3 +176,14 @@ pub async fn insert_user_data(
 
     Ok(())
 }
+
+pub async fn update_user_avatar(db: &PgPool, user_id: Uuid, avatar: Option<String>) -> sqlx::Result<()> {
+    sqlx::query!(
+        "UPDATE users SET avatar_url = $1 WHERE id = $2",
+        avatar, user_id,
+    )
+    .execute(db)
+    .await?;
+
+    Ok(())
+}

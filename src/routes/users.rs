@@ -3,7 +3,7 @@ use sqlx::{Postgres, QueryBuilder};
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::fetch_full_user, models::{dto::{FullUserView, NewUserDetails, NewUserPreferences}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto::{FullUserView, NewUserDetails, NewUserPreferences}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
@@ -123,12 +123,7 @@ async fn update_avatar(
             file.write_all(&data).await?;
 
             // update user's avatar in database
-            sqlx::query!(
-                "UPDATE users SET avatar_url = $1 WHERE id = $2",
-                image_path, token.sub,
-            )
-            .execute(&state.db)
-            .await?;
+            update_user_avatar(&state.db, token.sub, Some(image_path)).await?;
         }
     }
 
@@ -139,9 +134,6 @@ async fn delete_avatar(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<StatusCode> {
-    sqlx::query!("UPDATE users SET avatar_url = NULL WHERE id = $1", token.sub)
-        .execute(&state.db)
-        .await?;
-
+    update_user_avatar(&state.db, token.sub, None).await?;
     Ok(StatusCode::NO_CONTENT)
 }

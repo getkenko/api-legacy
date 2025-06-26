@@ -1,19 +1,6 @@
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::models::database::Product;
-
-pub async fn fetch_product_by_id(db: &PgPool, id: Uuid) -> sqlx::Result<Product> {
-    let product = sqlx::query_as!(
-        Product,
-        "SELECT id, name, barcode, ingredients, calories, proteins, fats, carbohydrates FROM products WHERE id = $1",
-        id,
-    )
-    .fetch_one(db)
-    .await?;
-
-    Ok(product)
-}
 
 pub async fn find_product_by_barcode(db: &PgPool, barcode: i32) -> sqlx::Result<Option<Product>> {
     let product = sqlx::query_as!(
