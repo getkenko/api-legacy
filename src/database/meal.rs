@@ -2,9 +2,12 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{database::{AddMealProduct, MealProduct}, dto::UserMealSectionView};
+use crate::models::{database::{AddMealProduct, UserMealProduct}, dto::UserMealSectionView};
 
-pub async fn fetch_user_meal_sections(db: &PgPool, user_id: &Uuid) -> sqlx::Result<Vec<UserMealSectionView>> {
+pub async fn fetch_user_meal_sections(
+    db: &PgPool,
+    user_id: &Uuid,
+) -> sqlx::Result<Vec<UserMealSectionView>> {
     let sections = sqlx::query_as!(
         UserMealSectionView,
         "SELECT id, index, label FROM user_meal_sections WHERE user_id = $1",
@@ -38,55 +41,40 @@ pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: &Uuid) -> sqlx
     Ok(product.exists)
 }
 
-pub async fn fetch_meal_product(db: &PgPool, id: &Uuid) -> sqlx::Result<MealProduct> {
-    let product = sqlx::query_as!(
-        MealProduct,
-        r#"SELECT id, kind AS "kind: _", product_id, name, calories, proteins, fats, carbohydrates FROM meal_products WHERE id = $1"#,
-        id,
+pub async fn fetch_user_meals_products(
+    db: &PgPool,
+    user_id: Uuid,
+    date: NaiveDate,
+) -> sqlx::Result<Vec<UserMealProduct>> {
+    sqlx::query_as!(
+        UserMealProduct,
+        r#"
+        SELECT
+            um.section_id,
+            mp.product_id,
+            mi.quantity,
+            coalesce(mp.name, p.name) AS "name!",
+            coalesce(mp.calories, p.calories) AS "calories!",
+            coalesce(mp.proteins, p.proteins) AS "proteins!",
+            coalesce(mp.fats, p.fats) AS "fats!",
+            coalesce(mp.carbohydrates, p.carbohydrates) AS "carbohydrates!"
+        FROM meal_products mp
+        LEFT JOIN products p ON p.id = mp.product_id
+        INNER JOIN meal_items mi ON mi.meal_product_id = mp.id
+        INNER JOIN user_meals um ON um.id = mi.meal_id
+        WHERE um.date = $1 AND um.user_id = $2
+        "#,
+        date, user_id,
     )
-    .fetch_one(db)
-    .await?;
-
-    Ok(product)
+    .fetch_all(db)
+    .await
 }
 
-// fetches all meal products for user's date, returning vector of pair of meal product with quantity
-pub async fn fetch_user_meal_products_for_date(
+pub async fn add_meal_product(
     db: &PgPool,
     user_id: &Uuid,
-    date: NaiveDate,
-) -> sqlx::Result<Vec<(MealProduct, i32)>> {
-    let mut products = vec![];
-
-    // fetch user_meals for this date
-    let meal_ids = sqlx::query!(
-        "SELECT id FROM user_meals WHERE user_id = $1 AND date = $2",
-        user_id, date,
-    )
-    .fetch_all(db)
-    .await?
-    .into_iter()
-    .map(|m| m.id)
-    .collect::<Vec<_>>();
-
-    // fetch all meal_items for this user_meals id
-    let meal_items = sqlx::query!(
-        "SELECT meal_product_id, quantity FROM meal_items WHERE meal_id IN (SELECT unnest($1::UUID[]))",
-        &meal_ids,
-    )
-    .fetch_all(db)
-    .await?;
-
-    // fetch all meal_products for this meal_items product ids
-    for meal_item in meal_items {
-        let meal_product = fetch_meal_product(db, &meal_item.meal_product_id).await?;
-        products.push((meal_product, meal_item.quantity));
-    }
-
-    Ok(products)
-}
-
-pub async fn add_meal_product(db: &PgPool, user_id: &Uuid, add_product: AddMealProduct) -> sqlx::Result<()> {
+    add_product: AddMealProduct,
+) -> sqlx::Result<()> {
     // create meal product in database
     let meal_product = sqlx::query!(
         "
@@ -94,8 +82,13 @@ pub async fn add_meal_product(db: &PgPool, user_id: &Uuid, add_product: AddMealP
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
         ",
-        add_product.kind as _, add_product.product_id, add_product.name, add_product.calories,
-        add_product.proteins, add_product.fats, add_product.carbohydrates,
+        add_product.kind as _,
+        add_product.product_id,
+        add_product.name,
+        add_product.calories,
+        add_product.proteins,
+        add_product.fats,
+        add_product.carbohydrates,
     )
     .fetch_one(db)
     .await?;
@@ -109,7 +102,8 @@ pub async fn add_meal_product(db: &PgPool, user_id: &Uuid, add_product: AddMealP
     .await?;
 
     // insert row into meal_items with user_meals uuid
-    sqlx::query!("
+    sqlx::query!(
+        "
         INSERT INTO meal_items (meal_id, meal_product_id, quantity) VALUES ($1, $2, $3)",
         meal.id, meal_product.id, add_product.quantity,
     )

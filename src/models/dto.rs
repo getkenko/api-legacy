@@ -5,9 +5,9 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::database::{DietKind, UserOrigin}, utils::conversion::metric_height_to_imperial};
+use crate::{models::database::{DietKind, UserMealProduct, UserOrigin}, utils::conversion::metric_height_to_imperial};
 
-use super::database::{FullUser, Language, MeasurementSystem, Product, Theme, WeightGoal};
+use super::database::{FullUser, Language, MeasurementSystem, Theme, WeightGoal};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -47,11 +47,12 @@ pub struct RegisterUserData {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FullUserView {
+    pub id: Uuid,
+
     pub username: String,
     pub display_name: String,
     pub email: String,
     pub avatar_url: String,
-    pub created_at: DateTime<Utc>,
 
     pub is_male: bool,
     pub weight: f32,
@@ -62,6 +63,8 @@ pub struct FullUserView {
     pub theme: Theme,
     pub language: Language,
     pub measurement_system: MeasurementSystem,
+
+    pub created_at: DateTime<Utc>,
 }
 
 impl From<FullUser> for FullUserView {
@@ -75,11 +78,12 @@ impl From<FullUser> for FullUserView {
         };
 
         Self {
+            id: user.id,
+
             username: user.username,
             display_name: user.display_name,
             email: user.email,
             avatar_url: format!("{CDN_URL}/{avatar_url}"),
-            created_at: user.created_at,
 
             is_male: user.is_male,
             weight: user.weight,
@@ -90,6 +94,8 @@ impl From<FullUser> for FullUserView {
             theme: user.theme,
             language: user.language,
             measurement_system: user.measurement_system,
+
+            created_at: user.created_at,
         }
     }
 }
@@ -125,23 +131,21 @@ pub struct MealDayMacro {
 }
 
 impl MealDayMacro {
-    pub fn add_raw(&mut self, calories: i32, proteins: i32, fats: i32, carbohydrates: i32) {
+    pub fn from_meals_products(meals_products: &[UserMealProduct]) -> Self {
+        let mut s = Self::default();
+
+        for p in meals_products {
+            s.add_raw(p.calories, p.proteins, p.fats, p.carbohydrates);
+        }
+
+        s
+    }
+
+    fn add_raw(&mut self, calories: i32, proteins: i32, fats: i32, carbohydrates: i32) {
         self.calories += calories;
         self.proteins += proteins;
         self.fats += fats;
         self.carbohydrates += carbohydrates;
-    }
-
-    pub fn add_product(&mut self, product: &Product, quantity: i32) {
-        // to get macro for this quantity from 100g:
-        // macro_for_100g * (quantity / 100)
-
-        // swaglord: not the best name but hey, at least its a closure
-        let from_quant = |val: i32| -> i32 {
-            val * (quantity / 100)
-        };
-
-        self.add_raw(from_quant(product.calories), from_quant(product.proteins), from_quant(product.fats), from_quant(product.carbohydrates));
     }
 }
 
@@ -170,4 +174,29 @@ pub struct QuickAddProduct {
     pub fats: i32,
     pub carbohydrates: i32,
     pub quantity: i32,
+}
+
+#[derive(Serialize)]
+pub struct UserMealProductView {
+    pub product_id: Option<Uuid>,
+    pub quantity: i32,
+    pub name: String,
+    pub calories: i32,
+    pub proteins: i32,
+    pub fats: i32,
+    pub carbohydrates: i32,
+}
+
+impl From<&UserMealProduct> for UserMealProductView {
+    fn from(product: &UserMealProduct) -> Self {
+        Self {
+            product_id: product.product_id,
+            quantity: product.quantity,
+            name: product.name.clone(),
+            calories: product.calories,
+            proteins: product.proteins,
+            fats: product.fats,
+            carbohydrates: product.carbohydrates,
+        }
+    }
 }

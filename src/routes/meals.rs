@@ -1,9 +1,10 @@
-use axum::{extract::{Path, State}, http::StatusCode, middleware, routing::{delete, get, post}, Extension, Json, Router};
+use std::collections::HashMap;
+
+use axum::{Extension, Json, Router, extract::{Path, State}, http::StatusCode, middleware, routing::{delete, get, post}};
 use chrono::NaiveDate;
-use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_meal_product, fetch_user_meal_products_for_date, fetch_user_meal_section_exists, fetch_user_meal_sections}, product::fetch_product_by_id}, models::{database::{AddMealProduct, MealProductKind}, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_user_meal_section_exists, fetch_user_meal_sections, fetch_user_meals_products}}, models::{database::AddMealProduct, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
@@ -15,7 +16,6 @@ pub fn router() -> Router<AppState> {
         .route("/{date}/macro", get(meal_macro))
         .route("/{date}/products", post(add_product))
         .route("/{date}/products/quick", post(quick_add_product)) // should we instead use query parameter in /products?
-
         .layer(middleware::from_fn(auth_middleware))
 }
 
@@ -24,100 +24,31 @@ async fn meal_macro(
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
 ) -> AppResult<Json<MealDayMacro>> {
-    let mut macro_sum = MealDayMacro::default();
-    let products = fetch_user_meal_products_for_date(&state.db, &token.sub, date).await?;
-
-    for (product, quantity) in products {
-        match product.kind {
-            MealProductKind::QuickAdd =>
-                // database already makes sure that these fields are set when kind is quick add
-                macro_sum.add_raw(product.calories.unwrap(), product.proteins.unwrap(), product.fats.unwrap(), product.carbohydrates.unwrap()),
-            MealProductKind::FromDatabase => {
-                let product = fetch_product_by_id(&state.db, product.product_id.unwrap()).await?;
-                macro_sum.add_product(&product, quantity);
-            }
-        }
-    }
-
-    Ok(Json(macro_sum))
-}
-
-// TODO: move it to the models module and use BETTER name
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct UserMealsProducts {
-    product_id: Option<Uuid>,
-    name: String,
-    calories: i32,
-    proteins: i32,
-    fats: i32,
-    carbohydrates: i32,
-}
-
-impl UserMealsProducts {
-    fn new(product_id: Option<Uuid>, name: String, calories: i32, proteins: i32, fats: i32, carbohydrates: i32) -> Self {
-        Self {
-            product_id,
-            name,
-            calories,
-            proteins,
-            fats,
-            carbohydrates,
-        }
-    }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct UserMeals {
-    section_id: Uuid,
-    products: Vec<UserMealsProducts>,
+    let products = fetch_user_meals_products(&state.db, token.sub, date).await?;
+    let day_macro = MealDayMacro::from_meals_products(&products);
+    Ok(Json(day_macro))
 }
 
 async fn user_meals(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
-) -> AppResult<Json<Vec<UserMeals>>> {
-    let mut res = vec![];
+) -> AppResult<Json<HashMap<Uuid, Vec<UserMealProductView>>>> {
+    let mut map: HashMap<Uuid, Vec<UserMealProductView>> = HashMap::new();
 
-    // fetch user_meals for this date
-    let meals = sqlx::query!(
-        "SELECT id, section_id FROM user_meals WHERE user_id = $1 AND date = $2",
-        token.sub, date,
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let meals_products = fetch_user_meals_products(&state.db, token.sub, date).await?;
 
-    for meal in meals {
-        let mut products = vec![];
+    for meal_product in meals_products.iter() {
+        let meal_product_view = UserMealProductView::from(meal_product); // explicit on purpose
 
-        // fetch meal items for this section
-        let items = sqlx::query!(
-            "SELECT meal_product_id, quantity FROM meal_items WHERE meal_id = $1",
-            meal.id,
-        )
-        .fetch_all(&state.db)
-        .await?;
-
-        for item in items {
-            let mp = fetch_meal_product(&state.db, &item.meal_product_id).await?;
-
-            let product = match mp.kind {
-                MealProductKind::QuickAdd => UserMealsProducts::new(None, mp.name.unwrap(), mp.calories.unwrap(), mp.proteins.unwrap(), mp.fats.unwrap(), mp.carbohydrates.unwrap()),
-                MealProductKind::FromDatabase => {
-                    let p = fetch_product_by_id(&state.db, mp.product_id.unwrap()).await?;
-                    UserMealsProducts::new(Some(p.id), p.name, p.calories, p.proteins, p.fats, p.carbohydrates)
-                }
-            };
-
-            products.push(product);
+        if let Some(section) = map.get_mut(&meal_product.section_id) { // already exists
+            section.push(meal_product_view);
+        } else { // create new key-value pair
+            map.insert(meal_product.section_id, vec![meal_product_view]);
         }
-
-        res.push(UserMeals { section_id: meal.section_id, products });
     }
 
-    Ok(Json(res))
+    Ok(Json(map))
 }
 
 // sections
@@ -141,7 +72,12 @@ async fn add_product(
         return Err(AppError::MealSectionNotFound);
     }
 
-    let add_product = AddMealProduct::from_database(date, product.section_id, product.quantity, product.product_id);
+    let add_product = AddMealProduct::from_database(
+        date,
+        product.section_id,
+        product.quantity,
+        product.product_id,
+    );
     add_meal_product(&state.db, &token.sub, add_product).await?;
 
     Ok(StatusCode::CREATED)
@@ -158,7 +94,16 @@ async fn quick_add_product(
         return Err(AppError::MealSectionNotFound);
     }
 
-    let add_product = AddMealProduct::quick_add(date, product.section_id, product.quantity, product.name, product.calories, product.proteins, product.fats, product.carbohydrates);
+    let add_product = AddMealProduct::quick_add(
+        date,
+        product.section_id,
+        product.quantity,
+        product.name,
+        product.calories,
+        product.proteins,
+        product.fats,
+        product.carbohydrates,
+    );
     add_meal_product(&state.db, &token.sub, add_product).await?;
 
     Ok(StatusCode::CREATED)
