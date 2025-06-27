@@ -40,16 +40,16 @@ impl From<FullUser> for FullUserView {
         // but holy fuck i aint adding 247821 struct fields because earth cant
         // use a single measurement system ffs
         let weight = match user.weight_unit {
-            WeightUnit::Kg => format!("{}kg", user.weight),
-            WeightUnit::Lb => format!("{:.2}lb", kg_to_lb(user.weight)),
+            WeightUnit::Kg => format!("{} kg", user.weight),
+            WeightUnit::Lb => format!("{:.2} lb", kg_to_lb(user.weight)),
             WeightUnit::StLb => {
                 let (st, lb) = kg_to_st_lb(user.weight);
-                format!("{st}st {lb}lb")
+                format!("{st:.2} st {lb:.2} lb")
             }
         };
 
         let height = match user.height_unit {
-            HeightUnit::Cm => format!("{}cm", user.height),
+            HeightUnit::Cm => format!("{} cm", user.height),
             HeightUnit::FtIn => {
                 let (ft, inch) = cm_to_ft_in(user.height);
                 format!("{ft}' {inch}\"")
