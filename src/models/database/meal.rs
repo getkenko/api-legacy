@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use uuid::Uuid;
 
 use crate::models::database::enums::MealProductKind;
@@ -14,6 +13,7 @@ pub struct UserMealProduct {
     pub carbohydrates: i32,
 }
 
+#[allow(dead_code)]
 pub struct UserMealSection {
     pub id: Uuid,
     pub user_id: Uuid,

@@ -1,17 +1,14 @@
 use axum::{extract::{Multipart, State}, http::StatusCode, middleware, routing::{get, patch, post}, Extension, Json, Router};
-use sqlx::{Postgres, QueryBuilder};
-use tokio::{fs::File, io::AsyncWriteExt};
-use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::users::{delete_user_avatar, get_full_user_info, update_user_avatar_from_form, update_user_details, update_user_preferences}};
 
 use super::AppState;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/me", get(user_info))
-        .route("/me/details", patch(update_user_details))
-        .route("/me/preferences", patch(update_user_preferences))
+        .route("/me/details", patch(update_details))
+        .route("/me/preferences", patch(update_preferences))
         .route("/me/avatar", post(update_avatar).delete(delete_avatar))
 
         .layer(middleware::from_fn_with_state(state, auth_middleware))
@@ -21,110 +18,34 @@ async fn user_info(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<FullUserView>> {
-    let user = fetch_full_user(&state.db, token.sub).await?;
-    let user_view = FullUserView::from(user);
-    Ok(Json(user_view))
+    let user = get_full_user_info(&state.db, token.sub).await?;
+    Ok(Json(user))
 }
 
-async fn update_user_details(
+async fn update_details(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
-    new_details: Json<UpdateUserDetailsRequest>,
+    Json(new_details): Json<UpdateUserDetailsRequest>,
 ) -> AppResult<StatusCode> {
-    if new_details.is_male.is_none() && new_details.weight.is_none() && new_details.height.is_none() && new_details.date_of_birth.is_none() {
-        return Ok(StatusCode::NO_CONTENT); // should we return error instead?
-    }
-
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
-    let mut separated = builder.separated(", ");
-
-    if let Some(is_male) = new_details.is_male {
-        separated.push("is_male = ");
-        separated.push_bind_unseparated(is_male);
-    }
-
-    if let Some(weight) = new_details.weight {
-        separated.push("weight = ");
-        separated.push_bind_unseparated(weight);
-    }
-
-    if let Some(height) = new_details.height {
-        separated.push("height = ");
-        separated.push_bind_unseparated(height);
-    }
-
-    if let Some(date_of_birth) = new_details.date_of_birth {
-        separated.push("date_of_birth = ");
-        separated.push_bind_unseparated(date_of_birth);
-    }
-
-    builder.push(" WHERE user_id = ");
-    builder.push_bind(token.sub);
-
-    builder.build().execute(&state.db).await?;
-
+    update_user_details(&state.db, token.sub, new_details).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn update_user_preferences(
+async fn update_preferences(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
-    Json(new_pref): Json<UpdateUserPreferencesRequest>,
+    Json(preferences): Json<UpdateUserPreferencesRequest>,
 ) -> AppResult<StatusCode> {
-    if new_pref.theme.is_none() && new_pref.language.is_none() {
-        return Ok(StatusCode::NO_CONTENT); // should we return error instead?
-    }
-
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
-    let mut separated = builder.separated(", ");
-
-    if let Some(is_male) = new_pref.theme {
-        separated.push("is_male = ");
-        separated.push_bind_unseparated(is_male);
-    }
-
-    if let Some(weight) = new_pref.language {
-        separated.push("weight = ");
-        separated.push_bind_unseparated(weight);
-    }
-
-    builder.push(" WHERE user_id = ");
-    builder.push_bind(token.sub);
-
-    builder.build().execute(&state.db).await?;
-
+    update_user_preferences(&state.db, token.sub, preferences).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 async fn update_avatar(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
-    mut multipart: Multipart,
+    multipart: Multipart,
 ) -> AppResult<()> {
-    while let Some(field) = multipart.next_field().await? {
-        if field.name() == Some("avatar") {
-            let data = field.bytes().await?;
-            let mime = infer::get(&data).ok_or(AppError::UnknownFileType)?;
-
-            // check if it's accepted image format
-            if mime.mime_type() != "image/png" && mime.mime_type() != "image/jpeg" {
-                return Err(AppError::UnknownFileType)?;
-            }
-
-            // create file name
-            let file_name = format!("{}.{}", Uuid::new_v4(), mime.extension());
-            let image_path = format!("avatars/{file_name}"); // used in CDN url
-            let file_path = format!("public/{image_path}"); // full file path with CDN directory
-
-            // save to disk
-            let mut file = File::create(file_path).await?;
-            file.write_all(&data).await?;
-
-            // update user's avatar in database
-            update_user_avatar(&state.db, token.sub, Some(image_path)).await?;
-        }
-    }
-
+    update_user_avatar_from_form(&state.db, token.sub, multipart).await?;
     Ok(())
 }
 
@@ -132,6 +53,6 @@ async fn delete_avatar(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<StatusCode> {
-    update_user_avatar(&state.db, token.sub, None).await?;
+    delete_user_avatar(&state.db, token.sub).await?;
     Ok(StatusCode::NO_CONTENT)
 }
