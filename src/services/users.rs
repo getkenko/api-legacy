@@ -55,14 +55,14 @@ pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: Up
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
     let mut separated = builder.separated(", ");
 
-    if let Some(is_male) = preferences.theme {
-        separated.push("is_male = ");
-        separated.push_bind_unseparated(is_male);
+    if let Some(theme) = preferences.theme {
+        separated.push("theme = ");
+        separated.push_bind_unseparated(theme);
     }
 
-    if let Some(weight) = preferences.language {
-        separated.push("weight = ");
-        separated.push_bind_unseparated(weight);
+    if let Some(language) = preferences.language {
+        separated.push("language = ");
+        separated.push_bind_unseparated(language);
     }
 
     builder.push(" WHERE user_id = ");
