@@ -1,6 +1,8 @@
 // TODO(swaglord): use ConnectionManager for automatic reconnections
 
-use redis::{aio::MultiplexedConnection, AsyncCommands};
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use redis::{aio::MultiplexedConnection, AsyncCommands, SetExpiry, SetOptions};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Cache {
@@ -27,8 +29,9 @@ impl Cache {
         Ok(Self { conn })
     }
 
-    pub async fn increment_requests(&self, key: &str) -> redis::RedisResult<u32> {
+    pub async fn increment_requests(&self, ip: &str) -> redis::RedisResult<u32> {
         let mut conn = self.conn.clone();
+        let key = format!("ratelimit_{ip}");
 
         let new_value = conn.incr(&key, 1).await?;
 
@@ -38,5 +41,26 @@ impl Cache {
         }
 
         Ok(new_value)
+    }
+
+    pub async fn user_next_update(&self, user_id: Uuid) -> redis::RedisResult<DateTime<Utc>> {
+        let mut conn = self.conn.clone();
+        let key = format!("check_{user_id}");
+
+        let ts: Option<i64> = conn.get(key).await?;
+        let next_update = Utc.timestamp_opt(ts.unwrap_or(1000), 0).unwrap();
+
+        Ok(next_update)
+    }
+
+    pub async fn update_user_next_update(&self, user_id: Uuid, next_update: Duration) -> redis::RedisResult<()> {
+        let mut conn = self.conn.clone();
+        let key = format!("check_{user_id}");
+
+        let now = (Utc::now() + next_update).timestamp();
+        let opt = SetOptions::default().with_expiration(SetExpiry::EX(Duration::days(7).num_seconds() as _));
+        let _: () = conn.set_options(key, now, opt).await?;
+
+        Ok(())
     }
 }

@@ -8,7 +8,7 @@ use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_m
 
 use super::AppState;
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/sections", get(user_sections))
         .route("/products/{product_id}", delete(delete_meal_product))
@@ -16,7 +16,7 @@ pub fn router() -> Router<AppState> {
         .route("/{date}/macro", get(meal_macro))
         .route("/{date}/products", post(add_product))
         .route("/{date}/products/quick", post(quick_add_product)) // should we instead use query parameter in /products?
-        .layer(middleware::from_fn(auth_middleware))
+        .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
 
 async fn meal_macro(

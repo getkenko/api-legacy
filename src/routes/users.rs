@@ -7,14 +7,14 @@ use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto:
 
 use super::AppState;
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/me", get(user_info))
         .route("/me/details", patch(update_user_details))
         .route("/me/preferences", patch(update_user_preferences))
         .route("/me/avatar", post(update_avatar).delete(delete_avatar))
 
-        .layer(middleware::from_fn(auth_middleware))
+        .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
 
 async fn user_info(

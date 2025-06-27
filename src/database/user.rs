@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::{FullUser, InsertUser, User};
+use crate::models::database::{FullUser, InsertUser, User, UserConflicts};
 
 pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
@@ -63,10 +63,15 @@ pub async fn fetch_full_user(db: &PgPool, id: &Uuid) -> sqlx::Result<FullUser> {
     Ok(info)
 }
 
-#[derive(Default)]
-pub struct UserConflicts {
-    pub username_taken: bool,
-    pub email_taken: bool,
+pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
+    let user = sqlx::query!(
+        r#"SELECT EXISTS ( SELECT 1 FROM users WHERE id = $1 ) AS "exists!""#,
+        user_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(user.exists)
 }
 
 pub async fn find_user_conflicts(db: &PgPool, username: &str, email: &str) -> sqlx::Result<UserConflicts> {

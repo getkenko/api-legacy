@@ -111,6 +111,12 @@ pub struct InsertUser {
     pub origin: UserOrigin,
 }
 
+#[derive(Default)]
+pub struct UserConflicts {
+    pub username_taken: bool,
+    pub email_taken: bool,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,

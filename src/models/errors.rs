@@ -32,16 +32,16 @@ pub enum AppError {
     #[error("{0} activity has an invalid value, it must be between 1 and 5")]
     ActivityNotInRange(String),
 
-    #[error("Invalid weight provided, make sure you filled weight_kg")]
+    #[error("Invalid weight provided, make sure you filled weightKg")]
     MissingKgWeight,
-    #[error("Invalid weight provided, make sure you filled weight_lb")]
+    #[error("Invalid weight provided, make sure you filled weightLb")]
     MissingLbWeight,
-    #[error("Invalid weight provided, make sure you filled weight_st and weight_lb")]
+    #[error("Invalid weight provided, make sure you filled weightSt and weightLb")]
     MissingStLbWeight,
 
-    #[error("Invalid height provided, make sure you filled height_cm")]
+    #[error("Invalid height provided, make sure you filled heightCm")]
     MissingCmHeight,
-    #[error("Invalid height provided, make sure you filled height_ft and height_in")]
+    #[error("Invalid height provided, make sure you filled heightFt and heightIn")]
     MissingFtInHeight,
 
     #[error("Weight must be greater than zero")]
