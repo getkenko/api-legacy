@@ -133,7 +133,7 @@ pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {
         ",
         user_id,
         0, "Breakfast",
-        1, "Launch",
+        1, "Lunch",
         2, "Dinner",
     )
     .execute(&mut *tx)
