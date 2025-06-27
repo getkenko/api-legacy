@@ -3,7 +3,7 @@ use sqlx::{Postgres, QueryBuilder};
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto::{FullUserView, NewUserDetails, NewUserPreferences}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
@@ -29,7 +29,7 @@ async fn user_info(
 async fn update_user_details(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
-    new_details: Json<NewUserDetails>,
+    new_details: Json<UpdateUserDetailsRequest>,
 ) -> AppResult<StatusCode> {
     if new_details.is_male.is_none() && new_details.weight.is_none() && new_details.height.is_none() && new_details.date_of_birth.is_none() {
         return Ok(StatusCode::NO_CONTENT); // should we return error instead?
@@ -69,7 +69,7 @@ async fn update_user_details(
 async fn update_user_preferences(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
-    Json(new_pref): Json<NewUserPreferences>,
+    Json(new_pref): Json<UpdateUserPreferencesRequest>,
 ) -> AppResult<StatusCode> {
     if new_pref.theme.is_none() && new_pref.language.is_none() {
         return Ok(StatusCode::NO_CONTENT); // should we return error instead?

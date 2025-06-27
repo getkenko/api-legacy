@@ -4,7 +4,7 @@ use axum::{Extension, Json, Router, extract::{Path, State}, http::StatusCode, mi
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meal_sections, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meal_sections, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
@@ -14,8 +14,8 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/products/{product_id}", delete(delete_meal_product))
         .route("/{date}", get(user_meals))
         .route("/{date}/macro", get(meal_macro))
-        .route("/{date}/products", post(add_product))
-        .route("/{date}/products/quick", post(quick_add_product)) // should we instead use query parameter in /products?
+        .route("/{date}/products", post(add_meal_product))
+        .route("/{date}/products/quick", post(quick_add_meal_product))
         .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
 
@@ -23,9 +23,9 @@ async fn meal_macro(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
-) -> AppResult<Json<MealDayMacro>> {
+) -> AppResult<Json<MealMacroResponse>> {
     let products = fetch_user_meals_products(&state.db, token.sub, date).await?;
-    let day_macro = MealDayMacro::from_meals_products(&products);
+    let day_macro = MealMacroResponse::from_meals_products(&products);
     Ok(Json(day_macro))
 }
 
@@ -66,11 +66,11 @@ async fn user_sections(
 }
 
 // products
-async fn add_product(
+async fn add_meal_product(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
-    Json(product): Json<AddProduct>,
+    Json(product): Json<AddMealProductRequest>,
 ) -> AppResult<StatusCode> {
     let section_exists = check_user_meal_section_exists(&state.db, product.section_id).await?;
     if !section_exists {
@@ -83,11 +83,11 @@ async fn add_product(
     Ok(StatusCode::CREATED)
 }
 
-async fn quick_add_product(
+async fn quick_add_meal_product(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
-    Json(product): Json<QuickAddProduct>,
+    Json(product): Json<QuickAddMealProductRequest>,
 ) -> AppResult<StatusCode> {
     let section_exists = check_user_meal_section_exists(&state.db, product.section_id).await?;
     if !section_exists {

@@ -1,6 +1,6 @@
 use axum::{extract::{Path, Query, State}, routing::get, Json, Router};
 
-use crate::{database::product::{fetch_products, find_product}, models::{dto::{ProductView, SearchProduct}, errors::{AppError, AppResult}}};
+use crate::{database::product::{fetch_products, find_product}, models::{dto::products::{ProductView, SearchProductQuery}, errors::{AppError, AppResult}}};
 
 use super::AppState;
 
@@ -12,7 +12,7 @@ pub fn router() -> Router<AppState> {
 
 async fn search_products(
     State(state): State<AppState>,
-    Query(search): Query<SearchProduct>,
+    Query(search): Query<SearchProductQuery>,
 ) -> AppResult<Json<Vec<ProductView>>> {
     let products = fetch_products(&state.db, &search.query).await?;
     let products_view = products

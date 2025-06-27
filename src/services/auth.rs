@@ -1,8 +1,8 @@
 use sqlx::PgPool;
 
-use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::validation::{validate_email, validate_password, validate_username}};
+use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::validation::{validate_email, validate_password, validate_username}};
 
-pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<LoginResponse> {
+pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
     let user = find_user(db, &creds.email)
         .await?
@@ -23,7 +23,7 @@ pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<Lo
     Ok(LoginResponse { token })
 }
 
-pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppResult<()> {
+pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppResult<()> {
     validate_username(&user_data.username)?;
     validate_email(&user_data.email)?;
     validate_password(&user_data.password)?;
