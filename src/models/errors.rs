@@ -1,4 +1,5 @@
 use axum::{extract::multipart, http::StatusCode, response::{IntoResponse, Response}, Json};
+use convert_case::{Case, Casing};
 use serde::Serialize;
 
 use crate::models::database::AccountState;
@@ -7,7 +8,7 @@ use crate::models::database::AccountState;
 
 pub type AppResult<T> = Result<T, AppError>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, strum_macros::AsRefStr, strum_macros::IntoStaticStr)]
 pub enum AppError {
     // MIDDLEWARES
     #[error("You need to be signed in to access this resource")]
@@ -123,7 +124,8 @@ impl IntoResponse for AppError {
         }
 
         let body = Json(ErrorResponse {
-            code: code.as_u16(),
+            status_code: code.as_u16(),
+            error_id: self.as_ref().to_case(Case::Kebab),
             error: self.to_string(),
         });
 
@@ -132,7 +134,9 @@ impl IntoResponse for AppError {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct ErrorResponse {
-    code: u16,
+    status_code: u16,
+    error_id: String,
     error: String,
 }

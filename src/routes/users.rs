@@ -21,9 +21,7 @@ async fn user_info(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<FullUserView>> {
-    // fetch full user data and convert it to user data view
     let user = fetch_full_user(&state.db, &token.sub).await?;
-    // i could use .into() but explicitly converting makes the code more readable
     let user_view = FullUserView::from(user);
     Ok(Json(user_view))
 }
