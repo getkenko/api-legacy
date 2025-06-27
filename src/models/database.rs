@@ -37,12 +37,21 @@ pub enum MealProductKind {
     QuickAdd,
 }
 
-#[derive(PartialEq, Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "camelCase")]
-#[sqlx(type_name = "measurement_system_enum", rename_all = "snake_case")]
-pub enum MeasurementSystem {
-    Metric,
-    Imperial,
+#[derive(Deserialize, sqlx::Type)]
+#[serde(rename_all = "snake_case")]
+#[sqlx(type_name = "weight_unit_enum", rename_all = "snake_case")]
+pub enum WeightUnit {
+    Kg,
+    Lb,
+    StLb,
+}
+
+#[derive(Deserialize, sqlx::Type)]
+#[serde(rename_all = "snake_case")]
+#[sqlx(type_name = "height_unit_enum", rename_all = "snake_case")]
+pub enum HeightUnit {
+    Cm,
+    FtIn,
 }
 
 #[derive(Serialize, Deserialize, sqlx::Type)]
@@ -79,6 +88,29 @@ pub enum DietKind {
 }
 
 // STRUCTS
+pub struct InsertUser {
+    pub username: String,
+    pub display_name: String,
+    pub email: String,
+    pub password: String,
+
+    pub is_male: bool,
+    pub weight: f32,
+    pub height: i32,
+    pub date_of_birth: NaiveDate,
+    pub idle_activity: i32,
+    pub workout_activity: i32,
+    pub diet_kind: DietKind,
+
+    pub weight_unit: WeightUnit,
+    pub height_unit: HeightUnit,
+
+    pub weight_goal: WeightGoal,
+    pub goal_diff_per_week: f32,
+
+    pub origin: UserOrigin,
+}
+
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -90,10 +122,10 @@ pub struct User {
     pub created_at: DateTime<Utc>,
 }
 
-// struct containing user, user_details and user_preferences
 pub struct FullUser {
     pub id: Uuid,
 
+    // users
     pub username: String,
     pub display_name: String,
     pub email: String,
@@ -102,6 +134,7 @@ pub struct FullUser {
     pub account_state: AccountState,
     pub created_at: DateTime<Utc>,
 
+    // user_details
     pub is_male: bool,
     pub weight: f32,
     pub height: i32,
@@ -110,10 +143,13 @@ pub struct FullUser {
     pub workout_activity: i32,
     pub diet_kind: DietKind,
 
+    // user_preferences
     pub theme: Theme,
     pub language: Language,
-    pub measurement_system: MeasurementSystem,
+    pub weight_unit: WeightUnit,
+    pub height_unit: HeightUnit,
 
+    // user_goals
     pub weight_goal: WeightGoal,
     pub goal_diff_per_week: f32,
 }
@@ -132,7 +168,7 @@ pub struct Product {
 
 pub struct UserMealProduct {
     pub section_id: Uuid,
-    pub product_id: Option<Uuid>, // we can deduce product type from it
+    pub product_id: Option<Uuid>,
     pub quantity: i32,
     pub name: String,
     pub calories: i32,

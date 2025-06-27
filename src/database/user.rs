@@ -1,8 +1,7 @@
-use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::{FullUser, MeasurementSystem, User, DietKind, UserOrigin, WeightGoal};
+use crate::models::database::{FullUser, InsertUser, User};
 
 pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
@@ -46,7 +45,8 @@ pub async fn fetch_full_user(db: &PgPool, id: &Uuid) -> sqlx::Result<FullUser> {
             ud.diet_kind AS "diet_kind: _",
             up.theme AS "theme: _",
             up.language AS "language: _",
-            up.measurement_system AS "measurement_system: _",
+            up.weight_unit AS "weight_unit: _",
+            up.height_unit AS "height_unit: _",
             ug.weight_goal AS "weight_goal: _",
             ug.goal_diff_per_week
         FROM users u
@@ -91,24 +91,7 @@ pub async fn find_user_conflicts(db: &PgPool, username: &str, email: &str) -> sq
     Ok(conflicts.unwrap_or(UserConflicts::default()))
 }
 
-pub async fn insert_user_data(
-    db: &PgPool,
-    username: &str,
-    display_name: &str,
-    email: &str,
-    password: &str,
-    is_male: bool,
-    weight: f32,
-    height: i32,
-    date_of_birth: NaiveDate,
-    idle_activity: i32,
-    workout_activity: i32,
-    measurement_system: MeasurementSystem,
-    weight_goal: WeightGoal,
-    goal_diff_per_week: f32,
-    diet_kind: DietKind,
-    user_origin: UserOrigin,
-) -> sqlx::Result<()> {
+pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
 
     // insert user
@@ -118,7 +101,7 @@ pub async fn insert_user_data(
         VALUES ($1, $2, $3, $4)
         RETURNING id
         ",
-        username, display_name, email, password,
+        insert_user.username, insert_user.display_name, insert_user.email, insert_user.password,
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -129,15 +112,15 @@ pub async fn insert_user_data(
         INSERT INTO user_details (user_id, is_male, weight, height, date_of_birth, idle_activity, workout_activity, diet_kind)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
-        user.id, is_male, weight, height, date_of_birth, idle_activity, workout_activity, diet_kind as _,
+        user.id, insert_user.is_male, insert_user.weight, insert_user.height, insert_user.date_of_birth, insert_user.idle_activity, insert_user.workout_activity, insert_user.diet_kind as _,
     )
     .execute(&mut *tx)
     .await?;
 
     // create preferences
     sqlx::query!(
-        "INSERT INTO user_preferences (user_id, measurement_system) VALUES ($1, $2)",
-        user.id, measurement_system as _,
+        "INSERT INTO user_preferences (user_id, weight_unit, height_unit) VALUES ($1, $2, $3)",
+        user.id, insert_user.weight_unit as _, insert_user.height_unit as _,
     )
     .execute(&mut *tx)
     .await?;
@@ -159,7 +142,7 @@ pub async fn insert_user_data(
     // insert values into user goals
     sqlx::query!(
         "INSERT INTO user_goals (user_id, weight_goal, goal_diff_per_week) VALUES ($1, $2, $3)",
-        user.id, weight_goal as _, goal_diff_per_week,
+        user.id, insert_user.weight_goal as _, insert_user.goal_diff_per_week,
     )
     .execute(&mut *tx)
     .await?;
@@ -167,7 +150,7 @@ pub async fn insert_user_data(
     // create metrics table
     sqlx::query!(
         "INSERT INTO user_metrics (user_id, origin) VALUES ($1, $2)",
-        user.id, user_origin as _,
+        user.id, insert_user.origin as _,
     )
     .execute(&mut *tx)
     .await?;

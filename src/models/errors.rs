@@ -31,6 +31,23 @@ pub enum AppError {
     #[error("{0} activity has an invalid value, it must be between 1 and 5")]
     ActivityNotInRange(String),
 
+    #[error("Invalid weight provided, make sure you filled weight_kg")]
+    MissingKgWeight,
+    #[error("Invalid weight provided, make sure you filled weight_lb")]
+    MissingLbWeight,
+    #[error("Invalid weight provided, make sure you filled weight_st and weight_lb")]
+    MissingStLbWeight,
+
+    #[error("Invalid height provided, make sure you filled height_cm")]
+    MissingCmHeight,
+    #[error("Invalid height provided, make sure you filled height_ft and height_in")]
+    MissingFtInHeight,
+
+    #[error("Weight must be greater than zero")]
+    NegativeWeight,
+    #[error("Height must be greater than zero")]
+    NegativeHeight,
+
     // VALIDATION
     #[error("Bad username length! It must be between 4 and 16")]
     BadUsernameLength,
@@ -87,7 +104,8 @@ impl AppError {
 
             Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |
             Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
-            Self::TokenInvalidSymbols | Self::InvalidAuthFormat => StatusCode::BAD_REQUEST,
+            Self::TokenInvalidSymbols | Self::InvalidAuthFormat | Self::MissingKgWeight | Self::MissingLbWeight |
+            Self::MissingStLbWeight | Self::MissingCmHeight | Self::MissingFtInHeight | Self::NegativeHeight | Self::NegativeWeight => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
 

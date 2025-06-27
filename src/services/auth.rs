@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 
-use crate::{database::user::{find_user_by_email, find_user_conflicts, insert_user_data}, models::{database::AccountState, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::jwt::Token, utils::{password::{hash_password, verify_password}, validation::{validate_email, validate_password, validate_username}}};
+use crate::{database::user::{find_user_by_email, find_user_conflicts, insert_user_data}, models::{database::{AccountState, InsertUser}, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::jwt::Token, utils::{password::verify_password, validation::{validate_email, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<LoginResponse> {
     // try to find the user
@@ -28,13 +28,6 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
     validate_email(&user_data.email)?;
     validate_password(&user_data.password)?;
 
-    let conflicts = find_user_conflicts(db, &user_data.username, &user_data.email).await?;
-    if conflicts.username_taken {
-        return Err(AppError::UsernameTaken);
-    } else if conflicts.email_taken {
-        return Err(AppError::EmailTaken);
-    }
-
     // check if idle activity and workout activity are in the range (1-5)
     if user_data.idle_activity < 1 || user_data.idle_activity > 5 {
         return Err(AppError::ActivityNotInRange("Idle".to_string()));
@@ -42,26 +35,17 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
         return Err(AppError::ActivityNotInRange("Workout".to_string()));
     }
 
-    let password = hash_password(&user_data.password).map_err(AppError::Crypto)?;
+    // check if username and/or email is already used by someone else
+    let conflicts = find_user_conflicts(db, &user_data.username, &user_data.email).await?;
+    if conflicts.username_taken {
+        return Err(AppError::UsernameTaken);
+    } else if conflicts.email_taken {
+        return Err(AppError::EmailTaken);
+    }
 
-    insert_user_data(
-        db,
-        &user_data.username,
-        &user_data.username,
-        &user_data.email,
-        &password,
-        user_data.is_male,
-        user_data.weight,
-        user_data.height,
-        user_data.date_of_birth,
-        user_data.idle_activity,
-        user_data.workout_activity,
-        user_data.measurement_system,
-        user_data.weight_goal,
-        user_data.goal_diff_per_week,
-        user_data.diet_kind,
-        user_data.origin,
-    ).await?;
+    // insert user into the database
+    let insert_user = InsertUser::try_from(user_data)?;
+    insert_user_data(db, insert_user).await?;
 
     Ok(())
 }

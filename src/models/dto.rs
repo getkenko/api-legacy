@@ -5,9 +5,9 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::database::{DietKind, UserMealProduct, UserOrigin}, utils::conversion::metric_height_to_imperial};
+use crate::{models::{database::{DietKind, HeightUnit, InsertUser, UserMealProduct, UserOrigin, WeightUnit}, errors::{AppError, AppResult}}, utils::{conversion::{cm_to_ft_in, ft_in_to_cm, kg_to_lb, kg_to_st_lb, lb_to_kg, st_lb_to_kg}, password::hash_password}};
 
-use super::database::{FullUser, Language, MeasurementSystem, Theme, WeightGoal};
+use super::database::{FullUser, Language, Theme, WeightGoal};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -31,16 +31,88 @@ pub struct RegisterUserData {
     pub email: String,
     pub password: String,
     pub is_male: bool,
-    pub weight: f32,
-    pub height: i32,
+
+    pub weight_unit: WeightUnit,
+    pub weight_kg: Option<f32>,
+    pub weight_lb: Option<f32>,
+    pub weight_st: Option<f32>,
+
+    pub height_unit: HeightUnit,
+    pub height_cm: Option<i32>,
+    pub height_ft: Option<i32>,
+    pub height_in: Option<i32>,
+
     pub date_of_birth: NaiveDate,
-    pub measurement_system: MeasurementSystem,
     pub idle_activity: i32,
     pub workout_activity: i32,
     pub weight_goal: WeightGoal,
     pub goal_diff_per_week: f32,
     pub diet_kind: DietKind,
     pub origin: UserOrigin,
+}
+
+impl RegisterUserData {
+    fn get_weight_and_height(&self) -> AppResult<(f32, i32)> {
+        let weight = match self.weight_unit {
+            WeightUnit::Kg => self.weight_kg.ok_or(AppError::MissingKgWeight)?,
+            WeightUnit::Lb => {
+                let lb = self.weight_lb.ok_or(AppError::MissingLbWeight)?;
+                lb_to_kg(lb)
+            }
+            WeightUnit::StLb => {
+                let st = self.weight_st.ok_or(AppError::MissingStLbWeight)?;
+                let lb = self.weight_lb.ok_or(AppError::MissingStLbWeight)?;
+                st_lb_to_kg(st, lb)
+            }
+        };
+
+        if weight <= 0.0 {
+            return Err(AppError::NegativeWeight);
+        }
+
+        let height = match self.height_unit {
+            HeightUnit::Cm => self.height_cm.ok_or(AppError::MissingCmHeight)?,
+            HeightUnit::FtIn => {
+                let ft = self.height_ft.ok_or(AppError::MissingFtInHeight)?;
+                let inch = self.height_in.ok_or(AppError::MissingFtInHeight)?;
+                ft_in_to_cm(ft, inch)
+            }
+        };
+
+        if height <= 0 {
+            return Err(AppError::NegativeHeight);
+        }
+
+        Ok((weight, height))
+    }
+}
+
+impl TryFrom<RegisterUserData> for InsertUser {
+    type Error = AppError;
+
+    fn try_from(user: RegisterUserData) -> Result<Self, Self::Error> {
+        let (weight, height) = user.get_weight_and_height()?;
+        let password = hash_password(&user.password).map_err(AppError::Crypto)?;
+
+        Ok(Self {
+            username: user.username.clone(),
+            display_name: user.username,
+            email: user.email,
+            password,
+            is_male: user.is_male,
+            weight,
+            height,
+            date_of_birth: user.date_of_birth,
+            idle_activity: user.idle_activity,
+            workout_activity: user.workout_activity,
+            diet_kind: user.diet_kind,
+            weight_unit: user.weight_unit,
+            height_unit: user.height_unit,
+            weight_goal: user.weight_goal,
+            goal_diff_per_week: user.goal_diff_per_week,
+            origin: user.origin,
+        })
+    }
 }
 
 // USERS
@@ -55,14 +127,14 @@ pub struct FullUserView {
     pub avatar_url: String,
 
     pub is_male: bool,
-    pub weight: f32,
+    // sending back weight and height in string because they're converted to user selected units
+    pub weight: String,
     pub height: String,
     pub date_of_birth: NaiveDate,
     pub diet_kind: DietKind,
 
     pub theme: Theme,
     pub language: Language,
-    pub measurement_system: MeasurementSystem,
 
     pub created_at: DateTime<Utc>,
 }
@@ -70,11 +142,26 @@ pub struct FullUserView {
 impl From<FullUser> for FullUserView {
     fn from(user: FullUser) -> Self {
         let avatar_url = user.avatar_url.unwrap_or(DEFAULT_AVATAR_URL.to_string());
-        let height = if user.measurement_system == MeasurementSystem::Imperial {
-            let (feet, inch) = metric_height_to_imperial(user.height);
-            format!("{feet}' {inch}\"")
-        } else {
-            user.height.to_string()
+
+        // convert weight and height to user preferred unit
+        // swaglord: i dont think api should return 'frontend' data to user
+        // but holy fuck i aint adding 247821 struct fields because earth cant
+        // use a single measurement system ffs
+        let weight = match user.weight_unit {
+            WeightUnit::Kg => format!("{}kg", user.weight),
+            WeightUnit::Lb => format!("{:.2}lb", kg_to_lb(user.weight)),
+            WeightUnit::StLb => {
+                let (st, lb) = kg_to_st_lb(user.weight);
+                format!("{st}st {lb}lb")
+            }
+        };
+
+        let height = match user.height_unit {
+            HeightUnit::Cm => format!("{}cm", user.height),
+            HeightUnit::FtIn => {
+                let (ft, inch) = cm_to_ft_in(user.height);
+                format!("{ft}' {inch}\"")
+            }
         };
 
         Self {
@@ -86,14 +173,13 @@ impl From<FullUser> for FullUserView {
             avatar_url: format!("{CDN_URL}/{avatar_url}"),
 
             is_male: user.is_male,
-            weight: user.weight,
+            weight,
             height,
             date_of_birth: user.date_of_birth,
             diet_kind: user.diet_kind,
 
             theme: user.theme,
             language: user.language,
-            measurement_system: user.measurement_system,
 
             created_at: user.created_at,
         }
