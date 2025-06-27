@@ -5,9 +5,7 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::{database::{DietKind, HeightUnit, InsertUser, UserMealProduct, UserOrigin, WeightUnit}, errors::{AppError, AppResult}}, utils::{conversion::{cm_to_ft_in, ft_in_to_cm, kg_to_lb, kg_to_st_lb, lb_to_kg, st_lb_to_kg}, password::hash_password}};
-
-use super::database::{FullUser, Language, Theme, WeightGoal};
+use crate::{models::{database::{enums::{DietKind, HeightUnit, Language, MealProductKind, Theme, UserOrigin, WeightGoal, WeightUnit}, meal::{InsertMealProduct, UserMealProduct, UserMealSection}, product::Product, user::{FullUser, InsertUser}}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{cm_to_ft_in, ft_in_to_cm, kg_to_lb, kg_to_st_lb, lb_to_kg, st_lb_to_kg}};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -207,6 +205,33 @@ pub struct SearchProduct {
     pub query: String,
 }
 
+#[derive(Serialize)]
+pub struct ProductView {
+    pub id: Uuid,
+    pub name: String,
+    pub barcode: i32,
+    pub ingredients: String,
+    pub calories: i32,
+    pub proteins: i32,
+    pub fats: i32,
+    pub carbohydrates: i32,
+}
+
+impl From<Product> for ProductView {
+    fn from(product: Product) -> Self {
+        Self {
+            id: product.id,
+            name: product.name,
+            barcode: product.barcode,
+            ingredients: product.ingredients,
+            calories: product.calories,
+            proteins: product.proteins,
+            fats: product.fats,
+            carbohydrates: product.carbohydrates,
+        }
+    }
+}
+
 // MEALS
 #[derive(Default, Serialize)]
 pub struct MealDayMacro {
@@ -242,12 +267,38 @@ pub struct UserMealSectionView {
     pub label: String,
 }
 
+impl From<UserMealSection> for UserMealSectionView {
+    fn from(section: UserMealSection) -> Self {
+        Self {
+            id: section.id,
+            index: section.index,
+            label: section.label,
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddProduct {
     pub section_id: Uuid,
     pub product_id: Uuid,
     pub quantity: i32,
+}
+
+impl From<AddProduct> for InsertMealProduct {
+    fn from(product: AddProduct) -> Self {
+        Self {
+            section_id: product.section_id,
+            quantity: product.quantity,
+            kind: MealProductKind::FromDatabase,
+            product_id: Some(product.product_id),
+            name: None,
+            calories: None,
+            proteins: None,
+            fats: None,
+            carbohydrates: None,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -260,6 +311,22 @@ pub struct QuickAddProduct {
     pub fats: i32,
     pub carbohydrates: i32,
     pub quantity: i32,
+}
+
+impl From<QuickAddProduct> for InsertMealProduct {
+    fn from(product: QuickAddProduct) -> Self {
+        Self {
+            section_id: product.section_id,
+            quantity: product.quantity,
+            kind: MealProductKind::QuickAdd,
+            product_id: None,
+            name: Some(product.name),
+            calories: Some(product.calories),
+            proteins: Some(product.proteins),
+            fats: Some(product.fats),
+            carbohydrates: Some(product.carbohydrates),
+        }
+    }
 }
 
 #[derive(Serialize)]

@@ -2,7 +2,7 @@ use axum::{extract::multipart, http::StatusCode, response::{IntoResponse, Respon
 use convert_case::{Case, Casing};
 use serde::Serialize;
 
-use crate::models::database::AccountState;
+use crate::models::database::enums::AccountState;
 
 // TODO: Use constants for validation errors
 

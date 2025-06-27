@@ -1,22 +1,19 @@
 use sqlx::PgPool;
 
-use crate::models::database::Product;
+use crate::models::database::product::Product;
 
-pub async fn find_product_by_barcode(db: &PgPool, barcode: i32) -> sqlx::Result<Option<Product>> {
-    let product = sqlx::query_as!(
+pub async fn find_product(db: &PgPool, barcode: i32) -> sqlx::Result<Option<Product>> {
+    sqlx::query_as!(
         Product,
         "SELECT id, name, barcode, ingredients, calories, proteins, fats, carbohydrates FROM products WHERE barcode = $1 LIMIT 1",
         barcode,
     )
     .fetch_optional(db)
-    .await?;
-
-    Ok(product)
+    .await
 }
 
-pub async fn fetch_products_with_query(db: &PgPool, query: &str) -> sqlx::Result<Vec<Product>> {
-    // swaglord: i hate this query and i hate sqlx type checking even more
-    let products = sqlx::query_as!(
+pub async fn fetch_products(db: &PgPool, query: &str) -> sqlx::Result<Vec<Product>> {
+    sqlx::query_as!(
         Product,
         r#"
         WITH
@@ -48,7 +45,5 @@ pub async fn fetch_products_with_query(db: &PgPool, query: &str) -> sqlx::Result
         query,
     )
     .fetch_all(db)
-    .await?;
-
-    Ok(products)
+    .await
 }

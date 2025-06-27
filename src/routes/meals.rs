@@ -4,7 +4,7 @@ use axum::{Extension, Json, Router, extract::{Path, State}, http::StatusCode, mi
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::{database::{meal::{add_meal_product, check_meal_item_exists, delete_meal_item, fetch_user_meal_section_exists, fetch_user_meal_sections, fetch_user_meals_products}}, models::{database::AddMealProduct, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
+use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meal_sections, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::{AddProduct, MealDayMacro, QuickAddProduct, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}, security::{jwt::Token, middlewares::auth_middleware}};
 
 use super::AppState;
 
@@ -56,8 +56,13 @@ async fn user_sections(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<Vec<UserMealSectionView>>> {
-    let sections = fetch_user_meal_sections(&state.db, &token.sub).await?;
-    Ok(Json(sections))
+    let sections = fetch_user_meal_sections(&state.db, token.sub).await?;
+    let sections_view = sections
+        .into_iter()
+        .map(|s| UserMealSectionView::from(s))
+        .collect::<Vec<_>>();
+
+    Ok(Json(sections_view))
 }
 
 // products
@@ -67,18 +72,13 @@ async fn add_product(
     Path(date): Path<NaiveDate>,
     Json(product): Json<AddProduct>,
 ) -> AppResult<StatusCode> {
-    let section_exists = fetch_user_meal_section_exists(&state.db, &product.section_id).await?;
+    let section_exists = check_user_meal_section_exists(&state.db, product.section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
     }
 
-    let add_product = AddMealProduct::from_database(
-        date,
-        product.section_id,
-        product.quantity,
-        product.product_id,
-    );
-    add_meal_product(&state.db, &token.sub, add_product).await?;
+    let insert = InsertMealProduct::from(product);
+    insert_meal_product(&state.db, token.sub, date, insert).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -89,22 +89,13 @@ async fn quick_add_product(
     Path(date): Path<NaiveDate>,
     Json(product): Json<QuickAddProduct>,
 ) -> AppResult<StatusCode> {
-    let section_exists = fetch_user_meal_section_exists(&state.db, &product.section_id).await?;
+    let section_exists = check_user_meal_section_exists(&state.db, product.section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
     }
 
-    let add_product = AddMealProduct::quick_add(
-        date,
-        product.section_id,
-        product.quantity,
-        product.name,
-        product.calories,
-        product.proteins,
-        product.fats,
-        product.carbohydrates,
-    );
-    add_meal_product(&state.db, &token.sub, add_product).await?;
+    let insert = InsertMealProduct::from(product);
+    insert_meal_product(&state.db, token.sub, date, insert).await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -113,11 +104,11 @@ async fn delete_meal_product(
     State(state): State<AppState>,
     Path(meal_product_id): Path<Uuid>,
 ) -> AppResult<StatusCode> {
-    if !check_meal_item_exists(&state.db, &meal_product_id).await? {
+    if !check_meal_item_exists(&state.db, meal_product_id).await? {
         return Err(AppError::MealProductNotFound);
     }
 
-    delete_meal_item(&state.db, &meal_product_id).await?;
+    delete_meal_item(&state.db, meal_product_id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

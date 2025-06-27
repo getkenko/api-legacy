@@ -1,10 +1,10 @@
 use sqlx::PgPool;
 
-use crate::{database::user::{find_user_by_email, find_user_conflicts, insert_user_data}, models::{database::{AccountState, InsertUser}, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::jwt::Token, utils::{password::verify_password, validation::{validate_email, validate_password, validate_username}}};
+use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::{LoginCredentials, LoginResponse, RegisterUserData}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::validation::{validate_email, validate_password, validate_username}};
 
 pub async fn process_login(db: &PgPool, creds: LoginCredentials) -> AppResult<LoginResponse> {
     // try to find the user
-    let user = find_user_by_email(db, &creds.email)
+    let user = find_user(db, &creds.email)
         .await?
         .ok_or(AppError::InvalidCredentials)?;
 
@@ -36,7 +36,7 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
     }
 
     // check if username and/or email is already used by someone else
-    let conflicts = find_user_conflicts(db, &user_data.username, &user_data.email).await?;
+    let conflicts = fetch_user_conflicts(db, &user_data.username, &user_data.email).await?;
     if conflicts.username_taken {
         return Err(AppError::UsernameTaken);
     } else if conflicts.email_taken {
@@ -44,8 +44,8 @@ pub async fn process_register(db: &PgPool, user_data: RegisterUserData) -> AppRe
     }
 
     // insert user into the database
-    let insert_user = InsertUser::try_from(user_data)?;
-    insert_user_data(db, insert_user).await?;
+    let insert = InsertUser::try_from(user_data)?;
+    insert_user(db, insert).await?;
 
     Ok(())
 }

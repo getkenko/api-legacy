@@ -1,30 +1,35 @@
 use axum::{extract::{Path, Query, State}, routing::get, Json, Router};
 
-use crate::{database::product::{fetch_products_with_query, find_product_by_barcode}, models::{database::Product, dto::SearchProduct, errors::{AppError, AppResult}}};
+use crate::{database::product::{fetch_products, find_product}, models::{dto::{ProductView, SearchProduct}, errors::{AppError, AppResult}}};
 
 use super::AppState;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(search_products))
-        .route("/barcode/{barcode}", get(find_product))
+        .route("/barcode/{barcode}", get(find_product_by_barcode))
 }
 
 async fn search_products(
     State(state): State<AppState>,
     Query(search): Query<SearchProduct>,
-) -> AppResult<Json<Vec<Product>>> {
-    let products = fetch_products_with_query(&state.db, &search.query).await?;
-    Ok(Json(products))
+) -> AppResult<Json<Vec<ProductView>>> {
+    let products = fetch_products(&state.db, &search.query).await?;
+    let products_view = products
+        .into_iter()
+        .map(|p| ProductView::from(p))
+        .collect::<Vec<_>>();
+    Ok(Json(products_view))
 }
 
-async fn find_product(
+async fn find_product_by_barcode(
     State(state): State<AppState>,
     Path(barcode): Path<i32>,
-) -> AppResult<Json<Product>> {
-    let product = find_product_by_barcode(&state.db, barcode)
+) -> AppResult<Json<ProductView>> {
+    let product = find_product(&state.db, barcode)
         .await?
         .ok_or(AppError::ProductNotFound)?;
+    let product_view = ProductView::from(product);
 
-    Ok(Json(product))
+    Ok(Json(product_view))
 }

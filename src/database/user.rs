@@ -1,18 +1,26 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::{FullUser, InsertUser, User, UserConflicts};
+use crate::models::database::user::{FullUser, InsertUser, User, UserConflicts};
 
-pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
+pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
+    let user = sqlx::query!(
+        r#"SELECT EXISTS ( SELECT 1 FROM users WHERE id = $1 ) AS "exists!""#,
+        user_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(user.exists)
+}
+
+pub async fn find_user(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
     let user = sqlx::query_as!(
         User,
         r#"
-        SELECT
-            id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
-        FROM
-            users
-        WHERE
-            email = $1
+        SELECT id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
+        FROM users
+        WHERE email = $1
         LIMIT 1
         "#,
         email,
@@ -23,7 +31,7 @@ pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option
     Ok(user)
 }
 
-pub async fn fetch_full_user(db: &PgPool, id: &Uuid) -> sqlx::Result<FullUser> {
+pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
     let info = sqlx::query_as!(
         FullUser,
         r#"
@@ -63,29 +71,15 @@ pub async fn fetch_full_user(db: &PgPool, id: &Uuid) -> sqlx::Result<FullUser> {
     Ok(info)
 }
 
-pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
-    let user = sqlx::query!(
-        r#"SELECT EXISTS ( SELECT 1 FROM users WHERE id = $1 ) AS "exists!""#,
-        user_id,
-    )
-    .fetch_one(db)
-    .await?;
-
-    Ok(user.exists)
-}
-
-pub async fn find_user_conflicts(db: &PgPool, username: &str, email: &str) -> sqlx::Result<UserConflicts> {
+pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> sqlx::Result<UserConflicts> {
     let conflicts = sqlx::query_as!(
         UserConflicts,
         r#"
         SELECT
             username = $1 AS "username_taken!",
             email = $2 AS "email_taken!"
-        FROM
-            users
-        WHERE
-            username = $1 OR
-            email = $2
+        FROM users
+        WHERE username = $1 OR email = $2
         LIMIT 1
         "#,
         username, email,
@@ -96,20 +90,21 @@ pub async fn find_user_conflicts(db: &PgPool, username: &str, email: &str) -> sq
     Ok(conflicts.unwrap_or(UserConflicts::default()))
 }
 
-pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Result<()> {
+pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
 
     // insert user
-    let user = sqlx::query!(
+    let user_id = sqlx::query!(
         "
         INSERT INTO users (username, display_name, email, password)
         VALUES ($1, $2, $3, $4)
         RETURNING id
         ",
-        insert_user.username, insert_user.display_name, insert_user.email, insert_user.password,
+        user.username, user.display_name, user.email, user.password,
     )
     .fetch_one(&mut *tx)
-    .await?;
+    .await?
+    .id;
 
     // insert details
     sqlx::query!(
@@ -117,7 +112,7 @@ pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Res
         INSERT INTO user_details (user_id, is_male, weight, height, date_of_birth, idle_activity, workout_activity, diet_kind)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
-        user.id, insert_user.is_male, insert_user.weight, insert_user.height, insert_user.date_of_birth, insert_user.idle_activity, insert_user.workout_activity, insert_user.diet_kind as _,
+        user_id, user.is_male, user.weight, user.height, user.date_of_birth, user.idle_activity, user.workout_activity, user.diet_kind as _,
     )
     .execute(&mut *tx)
     .await?;
@@ -125,7 +120,7 @@ pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Res
     // create preferences
     sqlx::query!(
         "INSERT INTO user_preferences (user_id, weight_unit, height_unit) VALUES ($1, $2, $3)",
-        user.id, insert_user.weight_unit as _, insert_user.height_unit as _,
+        user_id, user.weight_unit as _, user.height_unit as _,
     )
     .execute(&mut *tx)
     .await?;
@@ -136,7 +131,7 @@ pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Res
         INSERT INTO user_meal_sections (user_id, index, label) VALUES
         ($1, $2, $3), ($1, $4, $5), ($1, $6, $7)
         ",
-        user.id,
+        user_id,
         0, "Breakfast",
         1, "Launch",
         2, "Dinner",
@@ -147,7 +142,7 @@ pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Res
     // insert values into user goals
     sqlx::query!(
         "INSERT INTO user_goals (user_id, weight_goal, goal_diff_per_week) VALUES ($1, $2, $3)",
-        user.id, insert_user.weight_goal as _, insert_user.goal_diff_per_week,
+        user_id, user.weight_goal as _, user.goal_diff_per_week,
     )
     .execute(&mut *tx)
     .await?;
@@ -155,7 +150,7 @@ pub async fn insert_user_data(db: &PgPool, insert_user: InsertUser) -> sqlx::Res
     // create metrics table
     sqlx::query!(
         "INSERT INTO user_metrics (user_id, origin) VALUES ($1, $2)",
-        user.id, insert_user.origin as _,
+        user_id, user.origin as _,
     )
     .execute(&mut *tx)
     .await?;

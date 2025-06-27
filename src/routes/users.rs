@@ -21,7 +21,7 @@ async fn user_info(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
 ) -> AppResult<Json<FullUserView>> {
-    let user = fetch_full_user(&state.db, &token.sub).await?;
+    let user = fetch_full_user(&state.db, token.sub).await?;
     let user_view = FullUserView::from(user);
     Ok(Json(user_view))
 }
