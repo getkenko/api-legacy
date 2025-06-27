@@ -100,7 +100,9 @@ impl From<QuickAddMealProductRequest> for InsertMealProduct {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserMealProductView {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub product_id: Option<Uuid>,
     pub quantity: i32,
     pub name: String,
