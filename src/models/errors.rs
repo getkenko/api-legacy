@@ -20,6 +20,9 @@ pub enum AppError {
     #[error("You are being rate limited")]
     RateLimit,
 
+    #[error("No fields provided to be updated")]
+    NoFieldsToUpdate,
+
     // AUTH
     #[error("Invalid email and password combination")]
     InvalidCredentials,
@@ -81,6 +84,12 @@ pub enum AppError {
     #[error("Unknown file type uploaded, only JPEG and PNG files are accepted")]
     UnknownFileType,
 
+    // SECTIONS
+    #[error("Section with this ID could not be found")]
+    SectionNotFound,
+    #[error("You reached the maximum amount of sections")]
+    SectionLimitReached,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -106,9 +115,11 @@ impl AppError {
             Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |
             Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
             Self::TokenInvalidSymbols | Self::InvalidAuthFormat | Self::MissingKgWeight | Self::MissingLbWeight |
-            Self::MissingStLbWeight | Self::MissingCmHeight | Self::MissingFtInHeight | Self::NegativeHeight | Self::NegativeWeight => StatusCode::BAD_REQUEST,
+            Self::MissingStLbWeight | Self::MissingCmHeight | Self::MissingFtInHeight | Self::NegativeHeight | Self::NegativeWeight |
+            Self::NoFieldsToUpdate => StatusCode::BAD_REQUEST,
 
-            Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound => StatusCode::NOT_FOUND,
+            Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
+            Self::SectionLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
 
             Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }

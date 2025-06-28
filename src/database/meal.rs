@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::meal::{InsertMealProduct, UserMealProduct, UserMealSection};
+use crate::models::database::meal::{InsertMealProduct, UserMealProduct};
 
 pub async fn check_user_meal_section_exists(db: &PgPool, section_id: Uuid) -> sqlx::Result<bool> {
     let section = sqlx::query!(
@@ -24,16 +24,6 @@ pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: Uuid) -> sqlx:
     .await?;
 
     Ok(product.exists)
-}
-
-pub async fn fetch_user_meal_sections(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<UserMealSection>> {
-    sqlx::query_as!(
-        UserMealSection,
-        "SELECT * FROM user_meal_sections WHERE user_id = $1",
-        user_id,
-    )
-    .fetch_all(db)
-    .await
 }
 
 pub async fn fetch_user_meals_products(

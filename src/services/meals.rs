@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meal_sections, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView, UserMealSectionView}, errors::{AppError, AppResult}}};
+use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
 
 pub async fn calculate_meal_day_macro(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealMacroResponse> {
     let products = fetch_user_meals_products(db, user_id, date).await?;
@@ -28,16 +28,6 @@ pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate
     }
 
     Ok(meals)
-}
-
-pub async fn get_user_sections_layout(db: &PgPool, user_id: Uuid) -> AppResult<Vec<UserMealSectionView>> {
-    let sections = fetch_user_meal_sections(db, user_id).await?;
-    let sections_view = sections
-        .into_iter()
-        .map(|s| UserMealSectionView::from(s))
-        .collect::<Vec<_>>();
-
-    Ok(sections_view)
 }
 
 async fn check_section_exists(db: &PgPool, section_id: Uuid) -> AppResult<()> {

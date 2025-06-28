@@ -13,7 +13,7 @@ pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUse
 
 pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUserDetailsRequest) -> AppResult<()> {
     if details.is_male.is_none() && details.weight.is_none() && details.height.is_none() && details.date_of_birth.is_none() {
-        return Ok(());
+        return Err(AppError::NoFieldsToUpdate);
     }
 
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
@@ -49,7 +49,7 @@ pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUser
 
 pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: UpdateUserPreferencesRequest) -> AppResult<()> {
     if preferences.theme.is_none() && preferences.language.is_none() {
-        return Ok(());
+        return Err(AppError::NoFieldsToUpdate);
     }
 
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
