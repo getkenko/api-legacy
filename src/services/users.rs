@@ -1,9 +1,9 @@
 use axum::extract::Multipart;
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, update_user_avatar}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}};
+use crate::{database::user::{fetch_full_user, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = fetch_full_user(db, user_id).await?;
@@ -16,33 +16,9 @@ pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUser
         return Err(AppError::NoFieldsToUpdate);
     }
 
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
-    let mut separated = builder.separated(", ");
+    // TODO: convert the weight/height using correct units
 
-    if let Some(is_male) = details.is_male {
-        separated.push("is_male = ");
-        separated.push_bind_unseparated(is_male);
-    }
-
-    if let Some(weight) = details.weight {
-        separated.push("weight = ");
-        separated.push_bind_unseparated(weight);
-    }
-
-    if let Some(height) = details.height {
-        separated.push("height = ");
-        separated.push_bind_unseparated(height);
-    }
-
-    if let Some(date_of_birth) = details.date_of_birth {
-        separated.push("date_of_birth = ");
-        separated.push_bind_unseparated(date_of_birth);
-    }
-
-    builder.push(" WHERE user_id = ");
-    builder.push_bind(user_id);
-
-    builder.build().execute(db).await?;
+    update_user_details_opt(db, user_id, details.is_male, details.weight, details.height, details.date_of_birth).await?;
 
     Ok(())
 }
@@ -52,23 +28,7 @@ pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: Up
         return Err(AppError::NoFieldsToUpdate);
     }
 
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
-    let mut separated = builder.separated(", ");
-
-    if let Some(theme) = preferences.theme {
-        separated.push("theme = ");
-        separated.push_bind_unseparated(theme);
-    }
-
-    if let Some(language) = preferences.language {
-        separated.push("language = ");
-        separated.push_bind_unseparated(language);
-    }
-
-    builder.push(" WHERE user_id = ");
-    builder.push_bind(user_id);
-
-    builder.build().execute(db).await?;
+    update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;
 
     Ok(())
 }

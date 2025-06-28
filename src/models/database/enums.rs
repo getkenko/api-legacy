@@ -61,7 +61,7 @@ pub enum WeightGoal {
 }
 
 #[derive(Deserialize, sqlx::Type)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "user_origin_enum", rename_all = "lowercase")]
 pub enum UserOrigin {
     Instagram,

@@ -1,7 +1,8 @@
-use sqlx::PgPool;
+use chrono::NaiveDate;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::user::{FullUser, InsertUser, User, UserConflicts};
+use crate::models::database::{enums::{Language, Theme}, user::{FullUser, InsertUser, User, UserConflicts}};
 
 pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
     let user = sqlx::query!(
@@ -167,6 +168,74 @@ pub async fn update_user_avatar(db: &PgPool, user_id: Uuid, avatar: Option<Strin
     )
     .execute(db)
     .await?;
+
+    Ok(())
+}
+
+pub async fn update_user_details_opt(
+    db: &PgPool,
+    user_id: Uuid,
+    is_male: Option<bool>,
+    weight: Option<f32>,
+    height: Option<i32>,
+    date_of_birth: Option<NaiveDate>,
+) -> sqlx::Result<()> {
+    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
+    let mut separated = builder.separated(", ");
+
+    if let Some(is_male) = is_male {
+        separated.push("is_male = ");
+        separated.push_bind_unseparated(is_male);
+    }
+
+    if let Some(weight) = weight {
+        separated.push("weight = ");
+        separated.push_bind_unseparated(weight);
+    }
+
+    if let Some(height) = height {
+        separated.push("height = ");
+        separated.push_bind_unseparated(height);
+    }
+
+    if let Some(date_of_birth) = date_of_birth {
+        separated.push("date_of_birth = ");
+        separated.push_bind_unseparated(date_of_birth);
+    }
+
+    builder
+        .push(" WHERE user_id = ")
+        .push_bind(user_id);
+
+    builder.build().execute(db).await?;
+
+    Ok(())
+}
+
+pub async fn update_user_preferences_opt(
+    db: &PgPool,
+    user_id: Uuid,
+    theme: Option<Theme>,
+    language: Option<Language>,
+) -> sqlx::Result<()> {
+    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
+    let mut separated = builder.separated(", ");
+
+    if let Some(theme) = theme {
+        separated.push("theme = ");
+        separated.push_bind_unseparated(theme);
+    }
+
+    if let Some(language) = language {
+        separated.push("language = ");
+        separated.push_bind_unseparated(language);
+    }
+
+    builder
+        .push(" WHERE user_id = ")
+        .push_bind(user_id);
+
+    builder.build().execute(db).await?;
 
     Ok(())
 }
