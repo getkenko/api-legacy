@@ -4,17 +4,6 @@ use uuid::Uuid;
 
 use crate::models::database::meal::{InsertMealProduct, UserMealProduct};
 
-pub async fn check_user_meal_section_exists(db: &PgPool, section_id: Uuid) -> sqlx::Result<bool> {
-    let section = sqlx::query!(
-        r#"SELECT EXISTS ( SELECT 1 FROM user_meal_sections WHERE id = $1 ) AS "exists!""#,
-        section_id,
-    )
-    .fetch_one(db)
-    .await?;
-
-    Ok(section.exists)
-}
-
 pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: Uuid) -> sqlx::Result<bool> {
     let product = sqlx::query!(
         r#"SELECT EXISTS ( SELECT 1 FROM meal_items WHERE meal_product_id = $1 ) AS "exists!""#,
@@ -24,6 +13,26 @@ pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: Uuid) -> sqlx:
     .await?;
 
     Ok(product.exists)
+}
+
+pub async fn fetch_user_meal_product_count(
+    db: &PgPool,
+    user_id: Uuid,
+    date: NaiveDate,
+) -> sqlx::Result<i64> {
+    let products = sqlx::query!(
+        r#"
+        SELECT count(*) AS "count!"
+        FROM meal_items items
+        INNER JOIN user_meals meals ON meals.id = items.meal_id
+        WHERE meals.user_id = $1 AND meals.date = $2
+        "#,
+        user_id, date,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(products.count)
 }
 
 pub async fn fetch_user_meals_products(

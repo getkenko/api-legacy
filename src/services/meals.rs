@@ -4,7 +4,9 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::meal::{check_meal_item_exists, check_user_meal_section_exists, delete_meal_item, fetch_user_meals_products, insert_meal_product}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
+use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
+
+const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
 pub async fn calculate_meal_day_macro(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealMacroResponse> {
     let products = fetch_user_meals_products(db, user_id, date).await?;
@@ -30,10 +32,19 @@ pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate
     Ok(meals)
 }
 
-async fn check_section_exists(db: &PgPool, section_id: Uuid) -> AppResult<()> {
-    let section_exists = check_user_meal_section_exists(db, section_id).await?;
+async fn check_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
+    let section_exists = check_meal_section_exists(db, user_id, section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
+    }
+
+    Ok(())
+}
+
+async fn check_product_limit(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<()> {
+    let count = fetch_user_meal_product_count(db, user_id, date).await?;
+    if count >= USER_MEAL_PRODUCT_LIMIT {
+        return Err(AppError::MealProductLimitReached);
     }
 
     Ok(())
@@ -45,7 +56,9 @@ pub async fn add_meal_product_for_date(
     date: NaiveDate,
     product: AddMealProductRequest,
 ) -> AppResult<()> {
-    check_section_exists(db, product.section_id).await?;
+    check_section_exists(db, user_id, product.section_id).await?;
+    check_product_limit(db, user_id, date).await?;
+
     let insert = InsertMealProduct::from(product);
     insert_meal_product(db, user_id, date, insert).await?;
     Ok(())
@@ -57,7 +70,9 @@ pub async fn quick_add_meal_product_for_date(
     date: NaiveDate,
     product: QuickAddMealProductRequest,
 ) -> AppResult<()> {
-    check_section_exists(db, product.section_id).await?;
+    check_section_exists(db, user_id, product.section_id).await?;
+    check_product_limit(db, user_id, date).await?;
+
     let insert = InsertMealProduct::from(product);
     insert_meal_product(db, user_id, date, insert).await?;
     Ok(())

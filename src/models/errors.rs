@@ -79,6 +79,8 @@ pub enum AppError {
     MealSectionNotFound,
     #[error("Meal product with this ID not found")]
     MealProductNotFound,
+    #[error("You have reached the maximum amount of meal products for this day")]
+    MealProductLimitReached,
 
     // USERS
     #[error("Unknown file type uploaded, only JPEG and PNG files are accepted")]
@@ -87,7 +89,7 @@ pub enum AppError {
     // SECTIONS
     #[error("Section with this ID could not be found")]
     SectionNotFound,
-    #[error("You reached the maximum amount of sections")]
+    #[error("You have reached the maximum amount of sections")]
     SectionLimitReached,
 
     // 3RD PARTY
@@ -119,7 +121,7 @@ impl AppError {
             Self::NoFieldsToUpdate => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
-            Self::SectionLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
 
             Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
