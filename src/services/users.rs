@@ -17,6 +17,7 @@ pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUser
     }
 
     // TODO: convert the weight/height using correct units
+    // TODO: validate user input (weight/height/dob)
 
     update_user_details_opt(db, user_id, details.is_male, details.weight, details.height, details.date_of_birth).await?;
 

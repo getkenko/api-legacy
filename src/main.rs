@@ -22,7 +22,7 @@ const REDIS_URL: &str = dotenv!("REDIS_URL");
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    setup_logger(Level::DEBUG);
+    setup_logger(Level::INFO);
     tracing::info!("Logger initialized");
 
     // initialize database connection

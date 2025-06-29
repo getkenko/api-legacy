@@ -91,6 +91,8 @@ pub enum AppError {
     SectionNotFound,
     #[error("You have reached the maximum amount of sections")]
     SectionLimitReached,
+    #[error("This index is already used by another section, please use unique one")]
+    SectionIndexTaken,
 
     // 3RD PARTY
     #[error("Internal database error")]
@@ -111,7 +113,7 @@ impl AppError {
     fn status_code(&self) -> StatusCode {
         match self {
             Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
-            Self::UsernameTaken | Self::EmailTaken => StatusCode::CONFLICT,
+            Self::UsernameTaken | Self::EmailTaken | Self::SectionIndexTaken => StatusCode::CONFLICT,
             Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
 
             Self::UnknownFileType | Self::BadUsernameLength | Self::InvalidUsername | Self::InvalidEmailFormat | Self::EmailTooLong |

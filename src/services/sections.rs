@@ -15,9 +15,20 @@ pub async fn create_new_section(
         return Err(AppError::SectionLimitReached);
     }
 
-    let section = insert_meal_section(db, user_id, section.index, section.label).await?;
-    let section_view = UserMealSectionView::from(section);
-    Ok(section_view)
+    let section = match insert_meal_section(db, user_id, section.index, section.label).await {
+        Ok(s) => UserMealSectionView::from(s),
+        Err(why) => {
+            if let Some(err) = why.as_database_error() {
+                if err.is_unique_violation() {
+                    return Err(AppError::SectionIndexTaken);
+                }
+            }
+
+            return Err(AppError::Database(why));
+        }
+    };
+
+    Ok(section)
 }
 
 pub async fn get_user_sections_layout(

@@ -1,6 +1,18 @@
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::models::database::product::Product;
+
+pub async fn check_product_exists(db: &PgPool, product_id: Uuid) -> sqlx::Result<bool> {
+    let product = sqlx::query!(
+        r#"SELECT EXISTS ( SELECT 1 FROM products WHERE id = $1 ) AS "exists!""#,
+        product_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(product.exists)
+}
 
 pub async fn find_product(db: &PgPool, barcode: i32) -> sqlx::Result<Option<Product>> {
     sqlx::query_as!(

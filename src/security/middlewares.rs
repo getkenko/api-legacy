@@ -40,7 +40,7 @@ pub async fn auth_middleware(
             return Err(AppError::Unathorized);
         }
 
-        state.cache.update_user_next_update(token.sub, Duration::hours(6)).await?;
+        state.cache.update_user_next_update(token.sub, Duration::minutes(5)).await?;
     }
 
     // insert token and resume request

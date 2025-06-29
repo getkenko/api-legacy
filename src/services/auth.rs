@@ -35,6 +35,8 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
         return Err(AppError::ActivityNotInRange("Workout".to_string()));
     }
 
+    // TODO: validate other fields like weight/height, date of birth
+
     // check if username and/or email is already used by someone else
     let conflicts = fetch_user_conflicts(db, &user_data.username, &user_data.email).await?;
     if conflicts.username_taken {
