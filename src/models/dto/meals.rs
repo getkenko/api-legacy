@@ -112,8 +112,8 @@ pub struct UserMealProductView {
     pub carbohydrates: i32,
 }
 
-impl From<&UserMealProduct> for UserMealProductView {
-    fn from(product: &UserMealProduct) -> Self {
+impl From<UserMealProduct> for UserMealProductView {
+    fn from(product: UserMealProduct) -> Self {
         Self {
             product_id: product.product_id,
             quantity: product.quantity,

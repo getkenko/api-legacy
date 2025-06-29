@@ -19,13 +19,14 @@ pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate
 
     let meals_products = fetch_user_meals_products(db, user_id, date).await?;
 
-    for meal_product in meals_products.iter() {
+    for meal_product in meals_products.into_iter() {
+        let section_id = meal_product.section_id;
         let meal_product_view = UserMealProductView::from(meal_product);
 
-        if let Some(section) = meals.get_mut(&meal_product.section_id) { // already exists
+        if let Some(section) = meals.get_mut(&section_id) { // already exists
             section.push(meal_product_view);
         } else { // create new key-value pair
-            meals.insert(meal_product.section_id, vec![meal_product_view]);
+            meals.insert(section_id, vec![meal_product_view]);
         }
     }
 
@@ -66,14 +67,15 @@ pub async fn add_meal_product_for_date(
     user_id: Uuid,
     date: NaiveDate,
     product: AddMealProductRequest,
-) -> AppResult<()> {
+) -> AppResult<UserMealProductView> {
     check_section_exists(db, user_id, product.section_id).await?;
     validate_product_exists(db, product.product_id).await?;
     check_product_limit(db, user_id, date).await?;
 
     let insert = InsertMealProduct::from(product);
-    insert_meal_product(db, user_id, date, insert).await?;
-    Ok(())
+    let product = insert_meal_product(db, user_id, date, insert).await?;
+    let view = UserMealProductView::from(product);
+    Ok(view)
 }
 
 pub async fn quick_add_meal_product_for_date(
@@ -81,13 +83,14 @@ pub async fn quick_add_meal_product_for_date(
     user_id: Uuid,
     date: NaiveDate,
     product: QuickAddMealProductRequest,
-) -> AppResult<()> {
+) -> AppResult<UserMealProductView> {
     check_section_exists(db, user_id, product.section_id).await?;
     check_product_limit(db, user_id, date).await?;
 
     let insert = InsertMealProduct::from(product);
-    insert_meal_product(db, user_id, date, insert).await?;
-    Ok(())
+    let product = insert_meal_product(db, user_id, date, insert).await?;
+    let view = UserMealProductView::from(product);
+    Ok(view)
 }
 
 pub async fn delete_meal_product(db: &PgPool, product_id: Uuid) -> AppResult<()> {

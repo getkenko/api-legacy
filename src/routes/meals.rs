@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use axum::{Extension, Json, Router, extract::{Path, State}, http::StatusCode, middleware, routing::{delete, get, post}};
+use axum::{extract::{Path, State}, http::StatusCode, middleware, response::IntoResponse, routing::{delete, get, post}, Extension, Json, Router};
 use chrono::NaiveDate;
 use uuid::Uuid;
 
@@ -19,7 +19,6 @@ pub fn router(state: AppState) -> Router<AppState> {
         .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
 
-// index
 async fn meal_day_macro(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
@@ -38,15 +37,14 @@ async fn user_meals(
     Ok(Json(meals))
 }
 
-// products
 async fn add_meal_product(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<AddMealProductRequest>,
-) -> AppResult<StatusCode> {
-    add_meal_product_for_date(&state.db, token.sub, date, product).await?;
-    Ok(StatusCode::CREATED)
+) -> AppResult<impl IntoResponse> {
+    let product = add_meal_product_for_date(&state.db, token.sub, date, product).await?;
+    Ok((StatusCode::CREATED, Json(product)))
 }
 
 async fn quick_add_meal_product(
@@ -54,9 +52,9 @@ async fn quick_add_meal_product(
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
     Json(product): Json<QuickAddMealProductRequest>,
-) -> AppResult<StatusCode> {
-    quick_add_meal_product_for_date(&state.db, token.sub, date, product).await?;
-    Ok(StatusCode::CREATED)
+) -> AppResult<impl IntoResponse> {
+    let product = quick_add_meal_product_for_date(&state.db, token.sub, date, product).await?;
+    Ok((StatusCode::CREATED, Json(product)))
 }
 
 async fn handle_delete_meal_product(

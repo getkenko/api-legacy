@@ -69,7 +69,7 @@ pub async fn insert_meal_product(
     user_id: Uuid,
     date: NaiveDate,
     product: InsertMealProduct,
-) -> sqlx::Result<()> {
+) -> sqlx::Result<UserMealProduct> {
     let mut tx = db.begin().await?;
 
     // create meal product in database
@@ -102,14 +102,40 @@ pub async fn insert_meal_product(
 
     // insert row into meal_items with user_meals uuid
     sqlx::query!(
-        "
-        INSERT INTO meal_items (meal_id, meal_product_id, quantity) VALUES ($1, $2, $3)",
+        "INSERT INTO meal_items (meal_id, meal_product_id, quantity) VALUES ($1, $2, $3)",
         meal_id, meal_product_id, product.quantity,
     )
     .execute(&mut *tx)
     .await?;
 
-    tx.commit().await
+    // select details for response
+    let new_product = sqlx::query!(
+        r#"
+        SELECT
+            coalesce(mp.name, p.name) AS "name!", coalesce(mp.calories, p.calories) AS "calories!",
+            coalesce(mp.proteins, p.proteins) AS "proteins!", coalesce(mp.fats, p.fats) AS "fats!",
+            coalesce(mp.carbohydrates, p.carbohydrates) AS "carbohydrates!"
+        FROM meal_products mp
+        LEFT JOIN products p ON p.id = mp.product_id
+        WHERE mp.id = $1
+        "#,
+        meal_product_id,
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+
+    Ok(UserMealProduct {
+        section_id: product.section_id,
+        product_id: product.product_id,
+        quantity: product.quantity,
+        name: new_product.name,
+        calories: new_product.calories,
+        proteins: new_product.proteins,
+        fats: new_product.fats,
+        carbohydrates: new_product.carbohydrates,
+    })
 }
 
 pub async fn delete_meal_item(db: &PgPool, meal_product_id: Uuid) -> sqlx::Result<()> {
