@@ -20,11 +20,11 @@ pub enum Theme {
 }
 
 #[derive(Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "camelCase")]
-#[sqlx(type_name = "language_enum", rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "language_enum", rename_all = "lowercase")]
 pub enum Language {
-    English,
-    Polish,
+    En,
+    Pl,
 }
 
 #[derive(sqlx::Type)]
@@ -66,7 +66,7 @@ pub enum WeightGoal {
 pub enum UserOrigin {
     Instagram,
     TikTok,
-    Twitter,
+    X, // this is big twitter!!!!! nobody calls it X!!!!
     Twitch,
     Facebook,
     YouTube,
