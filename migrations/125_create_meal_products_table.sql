@@ -7,10 +7,10 @@ CREATE TABLE meal_products (
 
     -- quick_add variant
     name TEXT,
-    calories INT CHECK (calories > 0),
-    proteins INT CHECK (proteins > 0),
-    fats INT CHECK (fats > 0),
-    carbohydrates INT CHECK (carbohydrates > 0),
+    calories INT CHECK (calories >= 0),
+    proteins INT CHECK (proteins >= 0),
+    fats INT CHECK (fats >= 0),
+    carbohydrates INT CHECK (carbohydrates >= 0),
 
     CHECK (
         (

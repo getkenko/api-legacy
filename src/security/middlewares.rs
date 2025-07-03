@@ -7,6 +7,7 @@ use crate::{database::user::check_user_exists, models::errors::{AppError, AppRes
 
 // TODO: move to config file
 const MAX_REQUESTS_PER_MINUTE: u32 = 100;
+const USER_CHECK_INTERVAL: Duration = Duration::minutes(3);
 
 pub async fn auth_middleware(
     State(state): State<AppState>,
@@ -30,20 +31,20 @@ pub async fn auth_middleware(
     let token = Token::decode(token_str)?
         .ok_or(AppError::Unathorized)?;
 
-    // check user
-    let next_update = state.cache.user_next_update(token.sub).await?;
-
-    // check if user exists
-    if next_update <= Utc::now() {
+    // check if token is linked to valid user
+    let last_check = state.cache.user_last_check(token.sub).await?;
+    tracing::info!("before user check");
+    if last_check + USER_CHECK_INTERVAL <= Utc::now() {
+        tracing::info!("user check");
         let user_exists = check_user_exists(&state.db, token.sub).await?;
         if !user_exists {
             return Err(AppError::Unathorized);
         }
 
-        state.cache.update_user_next_update(token.sub, Duration::minutes(5)).await?;
+        state.cache.update_user_last_check(token.sub).await?;
     }
 
-    // insert token and resume request
+    // insert token and forward request
     req.extensions_mut().insert(token);
     let res = next.run(req).await;
     

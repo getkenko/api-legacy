@@ -77,18 +77,15 @@ pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> s
         UserConflicts,
         r#"
         SELECT
-            username = $1 AS "username_taken!",
-            email = $2 AS "email_taken!"
-        FROM users
-        WHERE username = $1 OR email = $2
-        LIMIT 1
+            EXISTS( SELECT 1 FROM users WHERE username = $1 ) AS "username_taken!",
+            EXISTS( SELECT 1 FROM users WHERE email = $2 ) AS "email_taken!"
         "#,
         username, email,
     )
-    .fetch_optional(db)
+    .fetch_one(db)
     .await?;
 
-    Ok(conflicts.unwrap_or(UserConflicts::default()))
+    Ok(conflicts)
 }
 
 pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {

@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::{models::{database::{enums::{DietKind, HeightUnit, UserOrigin, WeightGoal, WeightUnit}, user::InsertUser}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
+use crate::{models::{database::{enums::{DietKind, HeightUnit, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -102,5 +102,27 @@ impl TryFrom<RegisterRequest> for InsertUser {
             goal_diff_per_week: user.goal_diff_per_week,
             origin: user.origin,
         })
+    }
+}
+
+#[derive(Deserialize)]
+pub struct CheckAvailabilityQuery {
+    pub username: String,
+    pub email: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserConflictsView {
+    pub username_available: bool,
+    pub email_available: bool,
+}
+
+impl From<UserConflicts> for UserConflictsView {
+    fn from(conflicts: UserConflicts) -> Self {
+        Self {
+            username_available: !conflicts.username_taken,
+            email_available: !conflicts.email_taken,
+        }
     }
 }

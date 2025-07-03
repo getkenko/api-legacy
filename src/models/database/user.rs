@@ -48,7 +48,6 @@ pub struct FullUser {
     pub goal_diff_per_week: f32,
 }
 
-#[derive(Default)]
 pub struct UserConflicts {
     pub username_taken: bool,
     pub email_taken: bool,

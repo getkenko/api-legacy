@@ -1,15 +1,6 @@
 use sqlx::PgPool;
 
-use crate::{
-    database::user::{fetch_user_conflicts, find_user, insert_user},
-    models::{
-        database::{enums::AccountState, user::InsertUser},
-        dto::auth::{LoginRequest, LoginResponse, RegisterRequest},
-        errors::{AppError, AppResult},
-    },
-    security::{jwt::Token, password::verify_password},
-    utils::validation::{validate_email, validate_password, validate_username},
-};
+use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::validation::{validate_email, validate_password, validate_username}};
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
@@ -61,24 +52,8 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     Ok(())
 }
 
-pub async fn check_username_availability(db: &PgPool, username: &str) -> AppResult<()> {
-    validate_username(username)?;
-
-    let conflicts = fetch_user_conflicts(db, username, "").await?;
-    if conflicts.username_taken {
-        return Err(AppError::UsernameTaken);
-    }
-
-    Ok(())
-}
-
-pub async fn check_email_availability(db: &PgPool, email: &str) -> AppResult<()> {
-    validate_email(email)?;
-
-    let conflicts = fetch_user_conflicts(db, "", email).await?;
-    if conflicts.email_taken {
-        return Err(AppError::EmailTaken);
-    }
-
-    Ok(())
+pub async fn check_user_credentials_availability(db: &PgPool, username: &str, email: &str) -> AppResult<UserConflictsView> {
+    let conflicts = fetch_user_conflicts(db, username, email).await?;
+    let view = UserConflictsView::from(conflicts);
+    Ok(view)
 }

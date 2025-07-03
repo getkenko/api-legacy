@@ -4,6 +4,9 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use redis::{aio::MultiplexedConnection, AsyncCommands, SetExpiry, SetOptions};
 use uuid::Uuid;
 
+const RATE_LIMIT_PREFIX: &str = "rate-limit";
+const LAST_CHECK_PREFIX: &str = "last-check";
+
 #[derive(Clone)]
 pub struct Cache {
     conn: MultiplexedConnection,
@@ -31,7 +34,7 @@ impl Cache {
 
     pub async fn increment_requests(&self, ip: &str) -> redis::RedisResult<u32> {
         let mut conn = self.conn.clone();
-        let key = format!("ratelimit_{ip}");
+        let key = format!("{RATE_LIMIT_PREFIX}_{ip}");
 
         let new_value = conn.incr(&key, 1).await?;
 
@@ -43,22 +46,25 @@ impl Cache {
         Ok(new_value)
     }
 
-    pub async fn user_next_update(&self, user_id: Uuid) -> redis::RedisResult<DateTime<Utc>> {
+    pub async fn user_last_check(&self, user_id: Uuid) -> redis::RedisResult<DateTime<Utc>> {
         let mut conn = self.conn.clone();
-        let key = format!("check_{user_id}");
+        let key = format!("{LAST_CHECK_PREFIX}_{user_id}");
 
-        let ts: Option<i64> = conn.get(key).await?;
-        let next_update = Utc.timestamp_opt(ts.unwrap_or(1000), 0).unwrap();
+        let timestamp = conn
+            .get::<_, Option<i64>>(key)
+            .await?
+            .unwrap_or(1000);
+        let date_time = Utc.timestamp_opt(timestamp, 0).unwrap();
 
-        Ok(next_update)
+        Ok(date_time)
     }
 
-    pub async fn update_user_next_update(&self, user_id: Uuid, next_update: Duration) -> redis::RedisResult<()> {
+    pub async fn update_user_last_check(&self, user_id: Uuid) -> redis::RedisResult<()> {
         let mut conn = self.conn.clone();
-        let key = format!("check_{user_id}");
+        let key = format!("{LAST_CHECK_PREFIX}_{user_id}");
 
-        let now = (Utc::now() + next_update).timestamp();
-        let opt = SetOptions::default().with_expiration(SetExpiry::EX(Duration::days(7).num_seconds() as _));
+        let now = Utc::now().timestamp();
+        let opt = SetOptions::default().with_expiration(SetExpiry::EX(Duration::days(3).num_seconds() as _));
         let _: () = conn.set_options(key, now, opt).await?;
 
         Ok(())
