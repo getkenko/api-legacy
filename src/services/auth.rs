@@ -1,6 +1,7 @@
+use chrono::Utc;
 use sqlx::PgPool;
 
-use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::validation::{validate_email, validate_password, validate_username}};
+use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{validate_email, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
@@ -28,14 +29,12 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     validate_email(&user_data.email)?;
     validate_password(&user_data.password)?;
 
-    // check if idle activity and workout activity are in the range (1-5)
+    // check if idle activity and workout activity is in the range (1-5)
     if user_data.idle_activity < 1 || user_data.idle_activity > 5 {
         return Err(AppError::ActivityNotInRange("Idle".to_string()));
     } else if user_data.workout_activity < 1 || user_data.workout_activity > 5 {
         return Err(AppError::ActivityNotInRange("Workout".to_string()));
     }
-
-    // TODO: validate other fields like weight/height, date of birth
 
     // check if username and/or email is already used by someone else
     let conflicts = fetch_user_conflicts(db, &user_data.username, &user_data.email).await?;
@@ -47,6 +46,21 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
 
     // insert user into the database
     let insert = InsertUser::try_from(user_data)?;
+
+    // calculate user body metrics
+    let age = Utc::now()
+        .date_naive()
+        .years_since(insert.date_of_birth)
+        .unwrap_or(18);
+
+    let bmr = calculate_bmr(insert.weight, insert.height, age, insert.sex);
+    let base_tdee = calc_base_tdee(bmr, insert.workout_activity, insert.idle_activity);
+    let tdee = calculate_tdee(base_tdee, insert.goal_diff_per_week, insert.weight_goal);
+    let macros = calc_target_macros(insert.weight, tdee, insert.weight_goal);
+
+    tracing::info!("BMR: {bmr}, Base TDEE: {base_tdee}, TDEE: {tdee}, Target macros: {macros:?}");
+
+    // insert user to database
     insert_user(db, insert).await?;
 
     Ok(())

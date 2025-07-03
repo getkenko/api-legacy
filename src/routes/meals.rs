@@ -4,7 +4,7 @@ use axum::{extract::{Path, State}, http::StatusCode, middleware, response::IntoR
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::{models::{dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::meals::{add_meal_product_for_date, calculate_meal_day_macro, delete_meal_product, get_user_meals_for_date, quick_add_meal_product_for_date}};
+use crate::{models::{dto::meals::{AddMealProductRequest, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::meals::{add_meal_product_for_date, calc_meal_day_macros,  delete_meal_product, get_user_meals_for_date, quick_add_meal_product_for_date}};
 
 use super::AppState;
 
@@ -12,20 +12,20 @@ pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/products/{product_id}", delete(handle_delete_meal_product))
         .route("/{date}", get(user_meals))
-        .route("/{date}/macro", get(meal_day_macro))
+        .route("/{date}/macros", get(meal_day_macros))
         .route("/{date}/products", post(add_meal_product))
         .route("/{date}/products/quick", post(quick_add_meal_product))
-        
+
         .layer(middleware::from_fn_with_state(state, auth_middleware))
 }
 
-async fn meal_day_macro(
+async fn meal_day_macros(
     State(state): State<AppState>,
     Extension(token): Extension<Token>,
     Path(date): Path<NaiveDate>,
-) -> AppResult<Json<MealMacroResponse>> {
-    let day_macro = calculate_meal_day_macro(&state.db, token.sub, date).await?;
-    Ok(Json(day_macro))
+) -> AppResult<Json<MealDayMacrosResponse>> {
+    let macros = calc_meal_day_macros(&state.db, token.sub, date).await?;
+    Ok(Json(macros))
 }
 
 async fn user_meals(

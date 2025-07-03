@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "camelCase")]
+#[sqlx(type_name = "sex_enum", rename_all = "snake_case")]
+pub enum Sex {
+    Male,
+    Female,
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type, strum_macros::Display)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "account_state_enum", rename_all = "snake_case")]
@@ -51,7 +59,7 @@ pub enum HeightUnit {
     FtIn,
 }
 
-#[derive(Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "weight_goal_enum", rename_all = "snake_case")]
 pub enum WeightGoal {

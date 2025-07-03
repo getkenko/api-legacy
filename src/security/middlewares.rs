@@ -33,9 +33,7 @@ pub async fn auth_middleware(
 
     // check if token is linked to valid user
     let last_check = state.cache.user_last_check(token.sub).await?;
-    tracing::info!("before user check");
     if last_check + USER_CHECK_INTERVAL <= Utc::now() {
-        tracing::info!("user check");
         let user_exists = check_user_exists(&state.db, token.sub).await?;
         if !user_exists {
             return Err(AppError::Unathorized);

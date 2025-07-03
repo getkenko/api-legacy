@@ -4,14 +4,14 @@ use uuid::Uuid;
 use crate::models::database::{enums::MealProductKind, meal::{InsertMealProduct, UserMealProduct}, meal_section::UserMealSection};
 
 #[derive(Default, Serialize)]
-pub struct MealMacroResponse {
+pub struct MealDayMacrosResponse {
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
     pub carbohydrates: i32,
 }
 
-impl MealMacroResponse {
+impl MealDayMacrosResponse {
     pub fn from_meals_products(meals_products: &[UserMealProduct]) -> Self {
         let mut s = Self::default();
 

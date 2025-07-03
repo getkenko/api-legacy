@@ -3,7 +3,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use uuid::Uuid;
 
-use crate::models::database::enums::{AccountState, DietKind, HeightUnit, Language, Theme, UserOrigin, WeightGoal, WeightUnit};
+use crate::models::database::enums::{AccountState, DietKind, HeightUnit, Language, Sex, Theme, UserOrigin, WeightGoal, WeightUnit};
 
 pub struct User {
     pub id: Uuid,
@@ -29,7 +29,7 @@ pub struct FullUser {
     pub created_at: DateTime<Utc>,
 
     // user_details
-    pub is_male: bool,
+    pub sex: Sex,
     pub weight: f32,
     pub height: i32,
     pub date_of_birth: NaiveDate,
@@ -59,7 +59,7 @@ pub struct InsertUser {
     pub email: String,
     pub password: String,
 
-    pub is_male: bool,
+    pub sex: Sex,
     pub weight: f32,
     pub height: i32,
     pub date_of_birth: NaiveDate,

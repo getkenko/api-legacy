@@ -12,14 +12,13 @@ pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUse
 }
 
 pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUserDetailsRequest) -> AppResult<()> {
-    if details.is_male.is_none() && details.weight.is_none() && details.height.is_none() && details.date_of_birth.is_none() {
+    if details.sex.is_none() && details.weight.is_none() && details.height.is_none() && details.date_of_birth.is_none() {
         return Err(AppError::NoFieldsToUpdate);
     }
 
     // TODO: convert the weight/height using correct units
-    // TODO: validate user input (weight/height/dob)
 
-    update_user_details_opt(db, user_id, details.is_male, details.weight, details.height, details.date_of_birth).await?;
+    update_user_details_opt(db, user_id, details.sex, details.weight, details.height, details.date_of_birth).await?;
 
     Ok(())
 }

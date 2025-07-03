@@ -3,7 +3,7 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::database::{enums::{DietKind, HeightUnit, Language, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb, kg_to_st_lb}};
+use crate::{models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb, kg_to_st_lb}};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -18,7 +18,7 @@ pub struct FullUserView {
     pub email: String,
     pub avatar_url: String,
 
-    pub is_male: bool,
+    pub sex: Sex,
     // sending back weight and height in string because they're converted to user selected units
     pub weight: String,
     pub height: String,
@@ -64,7 +64,7 @@ impl From<FullUser> for FullUserView {
             email: user.email,
             avatar_url: format!("{CDN_URL}/{avatar_url}"),
 
-            is_male: user.is_male,
+            sex: user.sex,
             weight,
             height,
             date_of_birth: user.date_of_birth,
@@ -81,7 +81,7 @@ impl From<FullUser> for FullUserView {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserDetailsRequest {
-    pub is_male: Option<bool>,
+    pub sex: Option<Sex>,
     pub weight: Option<f32>,
     pub height: Option<i32>,
     pub date_of_birth: Option<NaiveDate>,

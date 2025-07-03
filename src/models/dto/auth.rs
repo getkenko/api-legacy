@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::{models::{database::{enums::{DietKind, HeightUnit, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
+use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -20,7 +20,7 @@ pub struct RegisterRequest {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub is_male: bool,
+    pub sex: Sex,
 
     pub weight_unit: WeightUnit,
     pub weight_kg: Option<f32>,
@@ -89,7 +89,7 @@ impl TryFrom<RegisterRequest> for InsertUser {
             display_name: user.username,
             email: user.email,
             password,
-            is_male: user.is_male,
+            sex: user.sex,
             weight,
             height,
             date_of_birth: user.date_of_birth,

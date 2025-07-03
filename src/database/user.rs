@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{Language, Theme}, user::{FullUser, InsertUser, User, UserConflicts}};
+use crate::models::database::{enums::{Language, Sex, Theme}, user::{FullUser, InsertUser, User, UserConflicts}};
 
 pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
     let user = sqlx::query!(
@@ -45,7 +45,7 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
             u.avatar_url,
             u.account_state AS "account_state: _",
             u.created_at,
-            ud.is_male,
+            ud.sex AS "sex: _",
             ud.weight,
             ud.height,
             ud.date_of_birth,
@@ -107,10 +107,10 @@ pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {
     // insert details
     sqlx::query!(
         "
-        INSERT INTO user_details (user_id, is_male, weight, height, date_of_birth, idle_activity, workout_activity, diet_kind)
+        INSERT INTO user_details (user_id, sex, weight, height, date_of_birth, idle_activity, workout_activity, diet_kind)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
-        user_id, user.is_male, user.weight, user.height, user.date_of_birth, user.idle_activity, user.workout_activity, user.diet_kind as _,
+        user_id, user.sex as _, user.weight, user.height, user.date_of_birth, user.idle_activity, user.workout_activity, user.diet_kind as _,
     )
     .execute(&mut *tx)
     .await?;
@@ -172,7 +172,7 @@ pub async fn update_user_avatar(db: &PgPool, user_id: Uuid, avatar: Option<Strin
 pub async fn update_user_details_opt(
     db: &PgPool,
     user_id: Uuid,
-    is_male: Option<bool>,
+    sex: Option<Sex>,
     weight: Option<f32>,
     height: Option<i32>,
     date_of_birth: Option<NaiveDate>,
@@ -180,9 +180,9 @@ pub async fn update_user_details_opt(
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
     let mut separated = builder.separated(", ");
 
-    if let Some(is_male) = is_male {
-        separated.push("is_male = ");
-        separated.push_bind_unseparated(is_male);
+    if let Some(sex) = sex {
+        separated.push("sex = ");
+        separated.push_bind_unseparated(sex);
     }
 
     if let Some(weight) = weight {

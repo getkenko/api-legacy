@@ -4,14 +4,14 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealMacroResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
+use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
-pub async fn calculate_meal_day_macro(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealMacroResponse> {
+pub async fn calc_meal_day_macros(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealDayMacrosResponse> {
     let products = fetch_user_meals_products(db, user_id, date).await?;
-    let day_macro = MealMacroResponse::from_meals_products(&products);
-    Ok(day_macro)
+    let macros = MealDayMacrosResponse::from_meals_products(&products);
+    Ok(macros)
 }
 
 pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<HashMap<Uuid, Vec<UserMealProductView>>> {
