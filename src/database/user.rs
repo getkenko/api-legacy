@@ -2,7 +2,11 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{Language, Sex, Theme}, user::{FullUser, InsertUser, User, UserConflicts}};
+use crate::models::database::{enums::{Language, Sex, Theme}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
+
+const DEFAULT_PROTEIN_DIST: i32 = 25;
+const DEFAULT_FAT_DIST: i32 = 25;
+const DEFAULT_CARB_DIST: i32 = 50;
 
 pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool> {
     let user = sqlx::query!(
@@ -57,11 +61,21 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
             up.weight_unit AS "weight_unit: _",
             up.height_unit AS "height_unit: _",
             ug.weight_goal AS "weight_goal: _",
-            ug.goal_diff_per_week
+            ug.goal_diff_per_week,
+            un.bmr,
+            un.base_tdee,
+            un.tdee,
+            un.protein_target,
+            un.fat_target,
+            un.carb_target,
+            un.protein_dist,
+            un.fat_dist,
+            un.carb_dist
         FROM users u
         INNER JOIN user_details ud ON u.id = ud.user_id
         INNER JOIN user_preferences up ON u.id = up.user_id
         INNER JOIN user_goals ug ON u.id = ug.user_id
+        INNER JOIN user_nutrients un ON u.id = un.user_id
         WHERE u.id = $1
         "#,
         id,
@@ -88,7 +102,7 @@ pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> s
     Ok(conflicts)
 }
 
-pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {
+pub async fn insert_user(db: &PgPool, user: InsertUser, nutrition: UserNutrition) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
 
     // insert user
@@ -149,6 +163,21 @@ pub async fn insert_user(db: &PgPool, user: InsertUser) -> sqlx::Result<()> {
     sqlx::query!(
         "INSERT INTO user_metrics (user_id, origin) VALUES ($1, $2)",
         user_id, user.origin as _,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // insert calculated values into user_nutritions
+    sqlx::query!(
+        "
+        INSERT INTO
+            user_nutrients (user_id, bmr, base_tdee, tdee, protein_target, fat_target, carb_target, protein_dist, fat_dist, carb_dist)
+        VALUES
+            ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ",
+        user_id, nutrition.bmr, nutrition.base_tdee, nutrition.tdee,
+        nutrition.protein_target, nutrition.fat_target, nutrition.carb_target,
+        DEFAULT_PROTEIN_DIST, DEFAULT_FAT_DIST, DEFAULT_CARB_DIST,
     )
     .execute(&mut *tx)
     .await?;

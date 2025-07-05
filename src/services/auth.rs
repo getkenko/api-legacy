@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sqlx::PgPool;
 
-use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::InsertUser}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{validate_email, validate_password, validate_username}}};
+use crate::{database::user::{fetch_user_conflicts, find_user, insert_user}, models::{database::{enums::AccountState, user::{InsertUser, UserNutrition}}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{validate_email, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
@@ -58,10 +58,17 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     let tdee = calculate_tdee(base_tdee, insert.goal_diff_per_week, insert.weight_goal);
     let macros = calc_target_macros(insert.weight, tdee, insert.weight_goal);
 
-    tracing::info!("BMR: {bmr}, Base TDEE: {base_tdee}, TDEE: {tdee}, Target macros: {macros:?}");
+    let nutrition = UserNutrition {
+        bmr,
+        base_tdee,
+        tdee,
+        protein_target: macros.proteins,
+        fat_target: macros.fats,
+        carb_target: macros.carbohydrates,
+    };
 
     // insert user to database
-    insert_user(db, insert).await?;
+    insert_user(db, insert, nutrition).await?;
 
     Ok(())
 }

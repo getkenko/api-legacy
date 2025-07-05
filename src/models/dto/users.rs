@@ -28,6 +28,17 @@ pub struct FullUserView {
     pub theme: Theme,
     pub language: Language,
 
+    // swaglord: uhhhhhh I hate postgres for not having unsigned numeric types
+    pub bmr: u32,
+    pub base_tdee: u32,
+    pub tdee: u32,
+    pub protein_target: u32,
+    pub fat_target: u32,
+    pub carb_target: u32,
+    pub protein_dist: i32,
+    pub fat_dist: i32,
+    pub carb_dist: i32,
+
     pub created_at: DateTime<Utc>,
 }
 
@@ -72,6 +83,16 @@ impl From<FullUser> for FullUserView {
 
             theme: user.theme,
             language: user.language,
+
+            bmr: user.bmr.round() as _,
+            base_tdee: user.base_tdee.round() as _,
+            tdee: user.tdee.round() as _,
+            protein_target: user.protein_target.round() as _,
+            fat_target: user.fat_target.round() as _,
+            carb_target: user.carb_target.round() as _,
+            protein_dist: user.protein_dist,
+            fat_dist: user.fat_dist,
+            carb_dist: user.carb_dist,
 
             created_at: user.created_at,
         }
