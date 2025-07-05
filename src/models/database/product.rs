@@ -3,7 +3,7 @@ use uuid::Uuid;
 pub struct Product {
     pub id: Uuid,
     pub name: String,
-    pub barcode: i32,
+    pub barcode: i64,
     pub ingredients: String,
     pub calories: i32,
     pub proteins: i32,

@@ -12,7 +12,7 @@ pub async fn query_products(db: &PgPool, query: &str) -> AppResult<Vec<ProductVi
     Ok(products_view)
 }
 
-pub async fn get_product_by_barcode(db: &PgPool, barcode: i32) -> AppResult<ProductView> {
+pub async fn get_product_by_barcode(db: &PgPool, barcode: i64) -> AppResult<ProductView> {
     let product = find_product(db, barcode)
         .await?
         .ok_or(AppError::ProductNotFound)?;

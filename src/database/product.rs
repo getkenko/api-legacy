@@ -14,7 +14,7 @@ pub async fn check_product_exists(db: &PgPool, product_id: Uuid) -> sqlx::Result
     Ok(product.exists)
 }
 
-pub async fn find_product(db: &PgPool, barcode: i32) -> sqlx::Result<Option<Product>> {
+pub async fn find_product(db: &PgPool, barcode: i64) -> sqlx::Result<Option<Product>> {
     sqlx::query_as!(
         Product,
         "SELECT id, name, barcode, ingredients, calories, proteins, fats, carbohydrates FROM products WHERE barcode = $1 LIMIT 1",

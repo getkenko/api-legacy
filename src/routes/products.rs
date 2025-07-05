@@ -20,7 +20,7 @@ async fn search_products(
 
 async fn find_product_by_barcode(
     State(state): State<AppState>,
-    Path(barcode): Path<i32>,
+    Path(barcode): Path<i64>,
 ) -> AppResult<Json<ProductView>> {
     let product = get_product_by_barcode(&state.db, barcode).await?;
     Ok(Json(product))

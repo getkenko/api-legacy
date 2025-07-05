@@ -12,7 +12,7 @@ pub struct SearchProductQuery {
 pub struct ProductView {
     pub id: Uuid,
     pub name: String,
-    pub barcode: i32,
+    pub barcode: i64,
     pub ingredients: String,
     pub calories: i32,
     pub proteins: i32,
