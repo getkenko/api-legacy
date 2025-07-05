@@ -15,8 +15,6 @@ use tracing::Level;
 
 use crate::{cache::Cache, utils::logger::setup_logger};
 
-// TODO: custom extractors for database/cache
-
 const DATABASE_URL: &str = dotenv!("DATABASE_URL");
 const REDIS_URL: &str = dotenv!("REDIS_URL");
 const BIND_URL: &str = dotenv!("BIND_URL");

@@ -14,7 +14,7 @@ pub async fn check_meal_section_exists(db: &PgPool, user_id: Uuid, section_id: U
     Ok(section.exists)
 }
 
-pub async fn fetch_user_section_count(db: &PgPool, user_id: Uuid) -> sqlx::Result<i64> {
+pub async fn fetch_user_section_count(db: &PgPool, user_id: Uuid) -> sqlx::Result<i32> {
     let res = sqlx::query!(
         r#"SELECT count(*) AS "count!" FROM user_meal_sections WHERE user_id = $1"#,
         user_id,
@@ -22,7 +22,7 @@ pub async fn fetch_user_section_count(db: &PgPool, user_id: Uuid) -> sqlx::Resul
     .fetch_one(db)
     .await?;
 
-    Ok(res.count)
+    Ok(res.count as _)
 }
 
 pub async fn fetch_meal_sections(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<UserMealSection>> {

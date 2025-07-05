@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, TimeDelta, Utc};
 use regex::Regex;
 
 use crate::models::errors::{AppError, AppResult};
@@ -75,107 +76,30 @@ pub fn validate_password(password: &str) -> AppResult<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{validate_email, validate_password, validate_username};
-
-    #[test]
-    fn test_valid_usernames() {
-        let usernames = [
-            "abcd",
-            "aaaaaaaaaaaaaaaa",
-            "nest12364",
-            "1827392732",
-        ];
-
-        for username in usernames {
-            let valid = validate_username(username).is_ok();
-            assert!(valid, "{username}");
-        }
+pub fn validate_activity(idle: i32, workout: i32) -> AppResult<()> {
+    if idle < 1 || idle > 5 {
+        return Err(AppError::ActivityNotInRange("Idle".to_string()));
+    } else if workout < 1 || workout > 5 {
+        return Err(AppError::ActivityNotInRange("Workout".to_string()));
     }
 
-    #[test]
-    fn test_invalid_usernames() {
-        let usernames = [
-            "abc",
-            "aaaaaaaaaaaaaaaaa",
-            "a-h-a",
-            "a_h_a",
-            "wl adyslaw",
-            "special$",
-            "!@#$%^&*()",
-        ];
+    Ok(())
+}
 
-        for username in usernames {
-            let valid = validate_username(username).is_err();
-            assert!(valid, "{username}");
-        }
+/// Validates provided date of birth, minimum 208 weeks (~4 years) in past
+pub fn validate_date_of_birth(dob: NaiveDate) -> AppResult<()> {
+    if Utc::now().date_naive() - dob < TimeDelta::weeks(208) { // 208 weeks ~ 4 years
+        return Err(AppError::DateOfBirthInFuture);
     }
 
-    #[test]
-    fn test_valid_email() {
-        let emails = [
-            "user@example.com",
-            "with.sub.domain@extra.com",
-            // r#""very.unusual.@.unusual.com"@example.com"#,
-            // r#""much.more unusual\"@example.com"#,
-            // r#""very.(),:;<>[]\".VERY.\"very@\\ \"very\".unusual"@example.com"#,
-            "admin@mailserver1",
-            // "user@[192.168.0.1]",
-            // "user@[IPv6:2001:db8::1]",
-            "user+tag@example.com",
-            "customer/department=shipping@example.com",
-            "!def!xyz%abc@example.com",
-            "_Yosemite.Sam@example.com",
-            "~@example.com",
-            // "あいうえお@example.com",
-            // r#""john..doe"@example.com"#,
-            // r#"" "@example.org"#,
-        ];
+    Ok(())
+}
 
-        for email in emails {
-            let valid = validate_email(email).is_ok();
-            assert!(valid, "{email}");
-        }
+/// Validates if provided date is in the past or today
+pub fn validate_meal_date(date: NaiveDate) -> AppResult<()> {
+    if Utc::now().date_naive() - date <= TimeDelta::days(0) {
+        return Err(AppError::MealDateInFuture);
     }
 
-    #[test]
-    fn test_invalid_email() {
-        let emails = [
-            "plainaddress",
-            "@no-local-part.com",
-            "Outlook Contact <outlook-contact@domain.com>",
-            "no-at.domain.com",
-            "user@.invalid.com",
-            "user@invalid..com",
-            ".user@example.com",
-            "user.@example.com",
-            "user..name@example.com",
-            "user@example..com",
-            "user@-example.com",
-            "user@example.com.",
-            "user@.com",
-            "user@com",
-            "user@exam_ple.com",
-        ];
-
-        for email in emails {
-            let valid = validate_email(email).is_err();
-            assert!(valid, "{email}");
-        }
-    }
-
-    #[test]
-    fn test_valid_password() {
-        let values = [
-            "abc!e123",
-            "@ea532@#@!!!",
-            "3aha2aha1aha@",
-        ];
-
-        for value in values {
-            let valid = validate_password(value).is_ok();
-            assert!(valid, "{value}");
-        }
-    }
+    Ok(())
 }

@@ -34,7 +34,7 @@ pub async fn update_user_macros_distribution(db: &PgPool, user_id: Uuid, dist: U
 pub async fn update_user_macros_target(db: &PgPool, user_id: Uuid, target: UpdateMacrosTarget) -> AppResult<()> {
     // make sure target macros are not below 0
     if target.protein < 0 || target.fat < 0 || target.carb < 0 {
-        return Err(AppError::NegativeTarget);
+        return Err(AppError::NegativeMacrosTarget);
     }
 
     // fetch user's TDEE for calculations

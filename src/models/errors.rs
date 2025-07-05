@@ -2,9 +2,11 @@ use axum::{extract::multipart, http::StatusCode, response::{IntoResponse, Respon
 use convert_case::{Case, Casing};
 use serde::Serialize;
 
-use crate::models::database::enums::AccountState;
+use crate::{models::database::enums::AccountState, services::sections::USER_SECTION_LIMIT};
 
 // TODO: Use constants for validation errors
+// TODO: separate errors into smaller enums (e.g. ValidationError that is embedded into AppError)
+// because some errors share the same status code therefore code can be cleaned
 
 pub type AppResult<T> = Result<T, AppError>;
 
@@ -51,6 +53,9 @@ pub enum AppError {
     NegativeWeight,
     #[error("Height must be greater than zero")]
     NegativeHeight,
+    
+    #[error("Invalid date of birth provided! It cannot be a date in future")]
+    DateOfBirthInFuture,
 
     // VALIDATION
     #[error("Bad username length! It must be between 4 and 16")]
@@ -81,10 +86,22 @@ pub enum AppError {
     MealProductNotFound,
     #[error("You have reached the maximum amount of meal products for this day")]
     MealProductLimitReached,
+    #[error("Provided meal date is in the future")]
+    MealDateInFuture,
+    #[error("Empty meal product name provided")]
+    MealProductEmptyName,
+    #[error("The meal product macros must be non-negative number greater or equal to 0")]
+    MealProductNegativeMacros,
+    #[error("Meal product quantity cannot be less than one")]
+    MealProductInvalidQuantity,
 
     // USERS
     #[error("Unknown file type uploaded, only JPEG and PNG files are accepted")]
     UnknownFileType,
+    #[error("Invalid weight provided, it must be greater than zero")]
+    InvalidWeight,
+    #[error("Invalid height provided, it must be greater than zero")]
+    InvalidHeight,
 
     // SECTIONS
     #[error("Section with this ID could not be found")]
@@ -93,6 +110,10 @@ pub enum AppError {
     SectionLimitReached,
     #[error("This index is already used by another section, please use unique one")]
     SectionIndexTaken,
+    #[error("Invalid section index! It must be within the (0 - {USER_SECTION_LIMIT}) range")]
+    InvalidSectionIndex,
+    #[error("Invalid section name! It cannot be empty")]
+    SectionHasEmptyName,
 
     // NUTRIENTS
     #[error("Macros distribution can't be below zero")]
@@ -101,8 +122,8 @@ pub enum AppError {
     DistributionAbove100,
     #[error("Distribution sum below 100%")]
     DistributionBelow100,
-    #[error("Macros target can't be below 0!")]
-    NegativeTarget,
+    #[error("Macronutrients must be greater or equal to 0")]
+    NegativeMacrosTarget,
 
     // 3RD PARTY
     #[error("Internal database error")]
@@ -130,7 +151,10 @@ impl AppError {
             Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
             Self::TokenInvalidSymbols | Self::InvalidAuthFormat | Self::MissingKgWeight | Self::MissingLbWeight |
             Self::MissingStLbWeight | Self::MissingCmHeight | Self::MissingFtInHeight | Self::NegativeHeight | Self::NegativeWeight |
-            Self::NoFieldsToUpdate | Self::NegativeDistribution | Self::DistributionAbove100 | Self::NegativeTarget | Self::DistributionBelow100 => StatusCode::BAD_REQUEST,
+            Self::NoFieldsToUpdate | Self::NegativeDistribution | Self::DistributionAbove100 | Self::NegativeMacrosTarget | Self::DistributionBelow100 |
+            Self::DateOfBirthInFuture | Self::MealDateInFuture | Self::MealProductNegativeMacros | Self::MealProductEmptyName |
+            Self::MealProductInvalidQuantity | Self::InvalidSectionIndex | Self::SectionHasEmptyName | Self::InvalidHeight |
+            Self::InvalidWeight => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
             Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,

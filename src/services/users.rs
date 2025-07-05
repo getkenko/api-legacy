@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}};
+use crate::{database::user::{fetch_full_user, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}, utils::validation::validate_date_of_birth};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = fetch_full_user(db, user_id).await?;
@@ -16,7 +16,23 @@ pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUser
         return Err(AppError::NoFieldsToUpdate);
     }
 
-    // TODO: convert the weight/height using correct units
+    if let Some(weight) = details.weight {
+        if weight <= 0.0 || weight >= 10000.0 {
+            return Err(AppError::InvalidWeight);
+        }
+    }
+
+    if let Some(height) = details.height {
+        if height <= 0 || height >= 300 {
+            return Err(AppError::InvalidHeight);
+        }
+    }
+
+    if let Some(dob) = details.date_of_birth {
+        validate_date_of_birth(dob)?;
+    }
+
+    // TODO: accept weight/height in user's preferred units
 
     update_user_details_opt(db, user_id, details.sex, details.weight, details.height, details.date_of_birth).await?;
 

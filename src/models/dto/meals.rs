@@ -78,7 +78,7 @@ pub struct QuickAddMealProductRequest {
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
-    pub carbohydrates: i32,
+    pub carbs: i32,
     pub quantity: i32,
 }
 
@@ -93,7 +93,7 @@ impl From<QuickAddMealProductRequest> for InsertMealProduct {
             calories: Some(product.calories),
             proteins: Some(product.proteins),
             fats: Some(product.fats),
-            carbohydrates: Some(product.carbohydrates),
+            carbohydrates: Some(product.carbs),
         }
     }
 }
