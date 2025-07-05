@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
+use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult, ValidationError}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -44,33 +44,33 @@ pub struct RegisterRequest {
 impl RegisterRequest {
     fn get_weight_and_height(&self) -> AppResult<(f32, i32)> {
         let weight = match self.weight_unit {
-            WeightUnit::Kg => self.weight_kg.ok_or(AppError::MissingKgWeight)?,
+            WeightUnit::Kg => self.weight_kg.ok_or(ValidationError::MissingKgWeight)?,
             WeightUnit::Lb => {
-                let lb = self.weight_lb.ok_or(AppError::MissingLbWeight)?;
+                let lb = self.weight_lb.ok_or(ValidationError::MissingLbWeight)?;
                 lb_to_kg(lb)
             }
             WeightUnit::StLb => {
-                let st = self.weight_st.ok_or(AppError::MissingStLbWeight)?;
-                let lb = self.weight_lb.ok_or(AppError::MissingStLbWeight)?;
+                let st = self.weight_st.ok_or(ValidationError::MissingStLbWeight)?;
+                let lb = self.weight_lb.ok_or(ValidationError::MissingStLbWeight)?;
                 st_lb_to_kg(st, lb)
             }
         };
 
         if weight <= 0.0 {
-            return Err(AppError::NegativeWeight);
+            return Err(ValidationError::NegativeWeight)?;
         }
 
         let height = match self.height_unit {
-            HeightUnit::Cm => self.height_cm.ok_or(AppError::MissingCmHeight)?,
+            HeightUnit::Cm => self.height_cm.ok_or(ValidationError::MissingCmHeight)?,
             HeightUnit::FtIn => {
-                let ft = self.height_ft.ok_or(AppError::MissingFtInHeight)?;
-                let inch = self.height_in.ok_or(AppError::MissingFtInHeight)?;
+                let ft = self.height_ft.ok_or(ValidationError::MissingFtInHeight)?;
+                let inch = self.height_in.ok_or(ValidationError::MissingFtInHeight)?;
                 ft_in_to_cm(ft, inch)
             }
         };
 
         if height <= 0 {
-            return Err(AppError::NegativeHeight);
+            return Err(ValidationError::NegativeHeight)?;
         }
 
         Ok((weight, height))

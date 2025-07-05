@@ -1,20 +1,20 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::user_nutrients::{fetch_user_nutrients_tdee, update_user_nutrients_macros}, models::{dto::nutrients::{UpdateMacrosDistribution, UpdateMacrosTarget}, errors::{AppError, AppResult}}, utils::nutrition::calc_grams_from_dist};
+use crate::{database::user_nutrients::{fetch_user_nutrients_tdee, update_user_nutrients_macros}, models::{dto::nutrients::{UpdateMacrosDistribution, UpdateMacrosTarget}, errors::{AppResult, ValidationError}}, utils::nutrition::calc_grams_from_dist};
 
 pub async fn update_user_macros_distribution(db: &PgPool, user_id: Uuid, dist: UpdateMacrosDistribution) -> AppResult<()> {
     // make sure the values are non-negative
     if dist.protein < 0 || dist.fat < 0 || dist.carb < 0 {
-        return Err(AppError::NegativeDistribution);
+        return Err(ValidationError::NegativeDistribution)?;
     }
 
     // check if total distribution is equal to 100%
     let sum = dist.protein + dist.fat + dist.carb;
     if sum > 100 {
-        return Err(AppError::DistributionAbove100);
+        return Err(ValidationError::DistributionAbove100)?;
     } else if sum < 100 {
-        return Err(AppError::DistributionBelow100);
+        return Err(ValidationError::DistributionBelow100)?;
     }
 
     // fetch user TDEE (needed for calculations)
@@ -34,7 +34,7 @@ pub async fn update_user_macros_distribution(db: &PgPool, user_id: Uuid, dist: U
 pub async fn update_user_macros_target(db: &PgPool, user_id: Uuid, target: UpdateMacrosTarget) -> AppResult<()> {
     // make sure target macros are not below 0
     if target.protein < 0 || target.fat < 0 || target.carb < 0 {
-        return Err(AppError::NegativeMacrosTarget);
+        return Err(ValidationError::NegativeMacrosTarget)?;
     }
 
     // fetch user's TDEE for calculations

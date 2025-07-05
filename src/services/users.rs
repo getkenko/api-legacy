@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult}}, utils::validation::validate_date_of_birth};
+use crate::{database::user::{fetch_full_user, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::validation::validate_date_of_birth};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = fetch_full_user(db, user_id).await?;
@@ -13,18 +13,18 @@ pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUse
 
 pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUserDetailsRequest) -> AppResult<()> {
     if details.sex.is_none() && details.weight.is_none() && details.height.is_none() && details.date_of_birth.is_none() {
-        return Err(AppError::NoFieldsToUpdate);
+        return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
     if let Some(weight) = details.weight {
         if weight <= 0.0 || weight >= 10000.0 {
-            return Err(AppError::InvalidWeight);
+            return Err(ValidationError::InvalidWeight)?;
         }
     }
 
     if let Some(height) = details.height {
         if height <= 0 || height >= 300 {
-            return Err(AppError::InvalidHeight);
+            return Err(ValidationError::InvalidHeight)?;
         }
     }
 
@@ -41,7 +41,7 @@ pub async fn update_user_details(db: &PgPool, user_id: Uuid, details: UpdateUser
 
 pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: UpdateUserPreferencesRequest) -> AppResult<()> {
     if preferences.theme.is_none() && preferences.language.is_none() {
-        return Err(AppError::NoFieldsToUpdate);
+        return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
     update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;
@@ -53,11 +53,11 @@ pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: 
     while let Some(field) = form.next_field().await? {
         if field.name() == Some("avatar") {
             let data = field.bytes().await?;
-            let mime = infer::get(&data).ok_or(AppError::UnknownFileType)?;
+            let mime = infer::get(&data).ok_or(ValidationError::UnknownFileType)?;
 
             // check if it's accepted image format
             if mime.mime_type() != "image/png" && mime.mime_type() != "image/jpeg" {
-                return Err(AppError::UnknownFileType)?;
+                return Err(ValidationError::UnknownFileType)?;
             }
 
             // create file name

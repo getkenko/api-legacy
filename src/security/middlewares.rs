@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use axum::{body::Body, extract::{ConnectInfo, State}, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
 use chrono::{Duration, Utc};
 
-use crate::{database::user::check_user_exists, models::errors::{AppError, AppResult}, routes::AppState, security::jwt::Token};
+use crate::{database::user::check_user_exists, models::errors::{AppError, AppResult, ValidationError}, routes::AppState, security::jwt::Token};
 
 // TODO: move to config file
 const MAX_REQUESTS_PER_MINUTE: u32 = 100;
@@ -20,12 +20,12 @@ pub async fn auth_middleware(
         .get(AUTHORIZATION)
         .map(|h| h.to_str())
         .ok_or(AppError::Unathorized)?
-        .map_err(|_| AppError::TokenInvalidSymbols)?;
+        .map_err(|_| ValidationError::InvalidToken)?;
 
     // strip bearer prefix
     let token_str = auth_header
         .strip_prefix("Bearer ")
-        .ok_or(AppError::InvalidAuthFormat)?;
+        .ok_or(ValidationError::InvalidAuthHeader)?;
 
     // try to decode token from data
     let token = Token::decode(token_str)?

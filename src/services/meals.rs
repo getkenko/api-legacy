@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}, utils::validation::validate_meal_date};
+use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}, utils::validation::validate_meal_date};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
@@ -111,11 +111,11 @@ pub async fn quick_add_meal_product_for_date(
 
     // name must be non-empty, macros must be >= 0, quantity needs to be >= 0
     if product.name.is_empty() {
-        return Err(AppError::MealProductEmptyName);
+        return Err(ValidationError::MealProductEmptyName)?;
     } else if product.calories < 0 || product.proteins < 0 || product.fats < 0 || product.carbs < 0 {
-        return Err(AppError::MealProductNegativeMacros);
+        return Err(ValidationError::MealProductNegativeMacros)?;
     } else if product.quantity <= 0 {
-        return Err(AppError::MealProductInvalidQuantity);
+        return Err(ValidationError::MealProductInvalidQuantity)?;
     }
 
     let insert = InsertMealProduct::from(product);

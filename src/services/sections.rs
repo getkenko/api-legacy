@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::meal_section::{check_meal_section_exists, delete_meal_section, fetch_meal_sections, fetch_user_section_count, insert_meal_section, reset_meal_sections, update_meal_section}, models::{dto::{meals::UserMealSectionView, sections::{NewSectionRequest, UpdateSectionRequest}}, errors::{AppError, AppResult}}};
+use crate::{database::meal_section::{check_meal_section_exists, delete_meal_section, fetch_meal_sections, fetch_user_section_count, insert_meal_section, reset_meal_sections, update_meal_section}, models::{dto::{meals::UserMealSectionView, sections::{NewSectionRequest, UpdateSectionRequest}}, errors::{AppError, AppResult, ValidationError}}};
 
 // TODO(swaglord): move to config or somewhere idk
 pub const USER_SECTION_LIMIT: i32 = 10;
@@ -13,9 +13,9 @@ pub async fn create_new_section(
 ) -> AppResult<UserMealSectionView> {
     // validate: index in range (0-USER_SECTION_LIMIT), label not empty
     if section.index < 0 || section.index >= USER_SECTION_LIMIT {
-        return Err(AppError::InvalidSectionIndex);
+        return Err(ValidationError::InvalidSectionIndex)?;
     } else if section.label.is_empty() {
-        return Err(AppError::SectionHasEmptyName);
+        return Err(ValidationError::SectionHasEmptyName)?;
     }
 
     let count = fetch_user_section_count(db, user_id).await?;
@@ -60,18 +60,18 @@ pub async fn update_user_section(
 ) -> AppResult<UserMealSectionView> {
     // validate user input
     if update.index.is_none() && update.label.is_none() {
-        return Err(AppError::NoFieldsToUpdate);
+        return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
     if let Some(index) = update.index {
         if index < 0 || index >= USER_SECTION_LIMIT {
-            return Err(AppError::InvalidSectionIndex);
+            return Err(ValidationError::InvalidSectionIndex)?;
         }
     }
 
     if let Some(label) = &update.label {
         if label.is_empty() {
-            return Err(AppError::SectionHasEmptyName);
+            return Err(ValidationError::SectionHasEmptyName)?;
         }
     }
 
