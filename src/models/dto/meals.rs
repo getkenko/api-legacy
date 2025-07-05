@@ -1,33 +1,32 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::models::database::{enums::MealProductKind, meal::{InsertMealProduct, UserMealProduct}, meal::UserMealSection};
 
 #[derive(Default, Serialize)]
-pub struct MealDayMacrosResponse {
-    pub calories: i32,
-    pub proteins: i32,
-    pub fats: i32,
-    pub carbohydrates: i32,
+pub struct Macros {
+    calories: i32,
+    proteins: i32,
+    fats: i32,
+    carbs: i32,
 }
 
-impl MealDayMacrosResponse {
-    pub fn from_meals_products(meals_products: &[UserMealProduct]) -> Self {
-        let mut s = Self::default();
-
-        for p in meals_products {
-            s.add_raw(p.calories, p.proteins, p.fats, p.carbohydrates);
-        }
-
-        s
+impl Macros {
+    pub fn add(&mut self, product: &UserMealProduct) {
+        self.calories += product.calories;
+        self.proteins += product.proteins;
+        self.fats += product.fats;
+        self.carbs += product.carbohydrates;
     }
+}
 
-    fn add_raw(&mut self, calories: i32, proteins: i32, fats: i32, carbohydrates: i32) {
-        self.calories += calories;
-        self.proteins += proteins;
-        self.fats += fats;
-        self.carbohydrates += carbohydrates;
-    }
+#[derive(Serialize)]
+pub struct MealDayMacrosResponse {
+    #[serde(flatten)]
+    pub per_section: HashMap<Uuid, Macros>,
+    pub total: Macros,
 }
 
 #[derive(Serialize)]

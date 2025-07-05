@@ -4,14 +4,29 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
+use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult}}};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
 pub async fn calc_meal_day_macros(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealDayMacrosResponse> {
     let products = fetch_user_meals_products(db, user_id, date).await?;
-    let macros = MealDayMacrosResponse::from_meals_products(&products);
-    Ok(macros)
+
+    let mut per_section: HashMap<Uuid, Macros> = HashMap::new();
+    let mut total = Macros::default();
+
+    for product in products {
+        total.add(&product);
+
+        if let Some(macros) = per_section.get_mut(&product.section_id) {
+            macros.add(&product);
+        } else {
+            let mut macros = Macros::default();
+            macros.add(&product);
+            per_section.insert(product.section_id, macros);
+        }
+    }
+
+    Ok(MealDayMacrosResponse { per_section, total })
 }
 
 pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<HashMap<Uuid, Vec<UserMealProductView>>> {
