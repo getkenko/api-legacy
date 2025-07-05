@@ -94,6 +94,16 @@ pub enum AppError {
     #[error("This index is already used by another section, please use unique one")]
     SectionIndexTaken,
 
+    // NUTRIENTS
+    #[error("Macros distribution can't be below zero")]
+    NegativeDistribution,
+    #[error("Distribution sum above 100%")]
+    DistributionAbove100,
+    #[error("Distribution sum below 100%")]
+    DistributionBelow100,
+    #[error("Macros target can't be below 0!")]
+    NegativeTarget,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -120,7 +130,7 @@ impl AppError {
             Self::BadPasswordLength | Self::PasswordNotEnoughSymbols | Self::PasswordNotEnoughDigits | Self::ActivityNotInRange(_) |
             Self::TokenInvalidSymbols | Self::InvalidAuthFormat | Self::MissingKgWeight | Self::MissingLbWeight |
             Self::MissingStLbWeight | Self::MissingCmHeight | Self::MissingFtInHeight | Self::NegativeHeight | Self::NegativeWeight |
-            Self::NoFieldsToUpdate => StatusCode::BAD_REQUEST,
+            Self::NoFieldsToUpdate | Self::NegativeDistribution | Self::DistributionAbove100 | Self::NegativeTarget | Self::DistributionBelow100 => StatusCode::BAD_REQUEST,
 
             Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
             Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,

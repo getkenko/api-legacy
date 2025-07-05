@@ -26,3 +26,12 @@ pub struct InsertMealProduct {
     pub fats: Option<i32>,
     pub carbohydrates: Option<i32>,
 }
+
+#[allow(dead_code)]
+#[derive(sqlx::FromRow)]
+pub struct UserMealSection {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub index: i32,
+    pub label: String,
+}

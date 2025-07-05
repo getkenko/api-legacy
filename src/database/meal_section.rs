@@ -1,7 +1,7 @@
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::{database::meal_section::UserMealSection};
+use crate::models::{database::meal::UserMealSection};
 
 pub async fn check_meal_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> sqlx::Result<bool> {
     let section = sqlx::query!(

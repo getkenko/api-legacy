@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::database::{enums::MealProductKind, meal::{InsertMealProduct, UserMealProduct}, meal_section::UserMealSection};
+use crate::models::database::{enums::MealProductKind, meal::{InsertMealProduct, UserMealProduct}, meal::UserMealSection};
 
 #[derive(Default, Serialize)]
 pub struct MealDayMacrosResponse {

@@ -47,16 +47,16 @@ pub struct FullUser {
     pub weight_goal: WeightGoal,
     pub goal_diff_per_week: f32,
 
-    // user_nutritions
+    // user_nutrients
     pub bmr: f32,
     pub base_tdee: f32,
     pub tdee: f32,
-    pub protein_target: f32,
-    pub fat_target: f32,
-    pub carb_target: f32,
-    pub protein_dist: i32,
-    pub fat_dist: i32,
-    pub carb_dist: i32,
+    pub protein_target: i32,
+    pub fat_target: i32,
+    pub carb_target: i32,
+    pub protein_dist: Option<i32>,
+    pub fat_dist: Option<i32>,
+    pub carb_dist: Option<i32>,
 }
 
 pub struct UserConflicts {
@@ -91,7 +91,7 @@ pub struct UserNutrition {
     pub bmr: f32,
     pub base_tdee: f32,
     pub tdee: f32,
-    pub protein_target: f32,
-    pub fat_target: f32,
-    pub carb_target: f32,
+    pub protein_target: i32,
+    pub fat_target: i32,
+    pub carb_target: i32,
 }

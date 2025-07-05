@@ -1,8 +1,9 @@
-pub mod auth;
-pub mod users;
-pub mod products;
-pub mod meals;
-pub mod sections;
+mod auth;
+mod users;
+mod products;
+mod meals;
+mod sections;
+mod nutrients;
 
 use axum::{extract::DefaultBodyLimit, middleware, Router};
 use sqlx::PgPool;
@@ -25,6 +26,7 @@ pub fn router(db: PgPool, cache: Cache) -> Router {
         .nest("/products", products::router())
         .nest("/meals", meals::router(state.clone()))
         .nest("/sections", sections::router(state.clone()))
+        .nest("/nutrients", nutrients::router(state.clone()))
         .nest_service("/public", ServeDir::new("public"))
 
         .with_state(state.clone())

@@ -59,12 +59,12 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     let macros = calc_target_macros(insert.weight, tdee, insert.weight_goal);
 
     let nutrition = UserNutrition {
-        bmr,
-        base_tdee,
-        tdee,
-        protein_target: macros.proteins,
-        fat_target: macros.fats,
-        carb_target: macros.carbohydrates,
+        bmr: bmr,
+        base_tdee: base_tdee,
+        tdee: tdee,
+        protein_target: macros.proteins.round() as _,
+        fat_target: macros.fats.round() as _,
+        carb_target: macros.carbs.round() as _,
     };
 
     // insert user to database

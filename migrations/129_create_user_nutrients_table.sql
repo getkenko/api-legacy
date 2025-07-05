@@ -5,11 +5,11 @@ CREATE TABLE user_nutrients (
     base_tdee FLOAT4 NOT NULL,
     tdee FLOAT4 NOT NULL,
     -- target macros that user needs to hit everyday
-    protein_target FLOAT4 NOT NULL,
-    fat_target FLOAT4 NOT NULL,
-    carb_target FLOAT4 NOT NULL,
+    protein_target INT NOT NULL,
+    fat_target INT NOT NULL,
+    carb_target INT NOT NULL,
     -- macros distribution
-    protein_dist INT NOT NULL,
-    fat_dist INT NOT NULL,
-    carb_dist INT NOT NULL
+    protein_dist INT,
+    fat_dist INT,
+    carb_dist INT
 )

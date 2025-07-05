@@ -13,7 +13,7 @@ pub fn calculate_bmr(weight: f32, height: i32, age: u32, sex: Sex) -> f32 {
         Sex::Female => base - 161.0,
     };
 
-    bmr.round()
+    bmr
 }
 
 fn activity_multiplier(activity: i32) -> f32 {
@@ -50,7 +50,7 @@ pub fn calculate_tdee(base_tdee: f32, goal_diff_per_week: f32, weight_goal: Weig
 pub struct TargetMacros {
     pub proteins: f32,
     pub fats: f32,
-    pub carbohydrates: f32,
+    pub carbs: f32,
 }
 
 pub fn calc_target_macros(weight: f32, tdee: f32, weight_goal: WeightGoal) -> TargetMacros {
@@ -66,8 +66,21 @@ pub fn calc_target_macros(weight: f32, tdee: f32, weight_goal: WeightGoal) -> Ta
     let fats_kcal = fat_percent * tdee;
     let fats = fats_kcal / 9.0;
 
-    let carbohydrates_kcal = tdee - proteins_kcal - fats_kcal;
-    let carbohydrates = carbohydrates_kcal / 4.0;
+    let carbs_kcal = tdee - proteins_kcal - fats_kcal;
+    let carbs = carbs_kcal / 4.0;
 
-    TargetMacros { proteins, fats, carbohydrates }
+    TargetMacros { proteins, fats, carbs }
 }
+
+pub fn calc_grams_from_dist(tdee: f32, dist: i32, div: f32) -> i32 {
+    let percent = dist as f32 / 100.0;
+    let kcal = tdee * percent;
+    let grams = kcal / div;
+    grams.round() as _
+}
+
+// pub fn calc_dist_from_grams(tdee: f32, grams: i32, mul: f32) -> i32 {
+//     let kcal = grams as f32 * mul;
+//     let dist = (kcal / tdee) * 100.0;
+//     dist.round() as _
+// }
