@@ -42,7 +42,7 @@ pub enum MealProductKind {
     QuickAdd,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Debug, Deserialize, sqlx::Type)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "weight_unit_enum", rename_all = "snake_case")]
 pub enum WeightUnit {
@@ -51,7 +51,7 @@ pub enum WeightUnit {
     StLb,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Debug, Deserialize, sqlx::Type)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "height_unit_enum", rename_all = "snake_case")]
 pub enum HeightUnit {

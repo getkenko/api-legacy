@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{Language, Sex, Theme}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
+use crate::models::database::{enums::{HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
 
 const DEFAULT_PROTEIN_DIST: i32 = 25;
 const DEFAULT_FAT_DIST: i32 = 25;
@@ -102,6 +102,23 @@ pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> s
     Ok(conflicts)
 }
 
+pub async fn fetch_user_units(db: &PgPool, user_id: Uuid) -> sqlx::Result<(WeightUnit, HeightUnit)> {
+    let user = sqlx::query!(
+        r#"
+        SELECT
+            weight_unit AS "weight_unit: WeightUnit",
+            height_unit AS "height_unit: HeightUnit"
+        FROM user_preferences
+        WHERE user_id = $1
+        "#,
+        user_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok((user.weight_unit, user.height_unit))
+}
+
 pub async fn insert_user(db: &PgPool, user: InsertUser, nutrition: UserNutrition) -> sqlx::Result<()> {
     let mut tx = db.begin().await?;
 
@@ -141,12 +158,13 @@ pub async fn insert_user(db: &PgPool, user: InsertUser, nutrition: UserNutrition
     sqlx::query!(
         "
         INSERT INTO user_meal_sections (user_id, index, label) VALUES
-        ($1, $2, $3), ($1, $4, $5), ($1, $6, $7)
+        ($1, $2, $3), ($1, $4, $5), ($1, $6, $7), ($1, $8, $9)
         ",
         user_id,
         0, "Breakfast",
         1, "Lunch",
         2, "Dinner",
+        3, "Snacks",
     )
     .execute(&mut *tx)
     .await?;
@@ -205,6 +223,8 @@ pub async fn update_user_details_opt(
     weight: Option<f32>,
     height: Option<i32>,
     date_of_birth: Option<NaiveDate>,
+    idle_activity: Option<i32>,
+    workout_activity: Option<i32>,
 ) -> sqlx::Result<()> {
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
     let mut separated = builder.separated(", ");
@@ -227,6 +247,16 @@ pub async fn update_user_details_opt(
     if let Some(date_of_birth) = date_of_birth {
         separated.push("date_of_birth = ");
         separated.push_bind_unseparated(date_of_birth);
+    }
+
+    if let Some(activity) = idle_activity {
+        separated.push("idle_activity = ");
+        separated.push_bind_unseparated(activity);
+    }
+
+    if let Some(activity) = workout_activity {
+        separated.push("workout_activity = ");
+        separated.push_bind_unseparated(activity);
     }
 
     builder

@@ -148,3 +148,39 @@ pub async fn delete_meal_item(db: &PgPool, meal_product_id: Uuid) -> sqlx::Resul
 
     Ok(())
 }
+
+pub async fn delete_meal_products_for_date(db: &PgPool, date: NaiveDate, section_id: Option<Uuid>) -> sqlx::Result<()> {
+    if let Some(section_id) = section_id {
+        sqlx::query!(
+            "
+            DELETE FROM meal_products
+            WHERE id IN (
+                SELECT prod.id
+                FROM user_meals meal
+                INNER JOIN meal_items item ON item.meal_id = meal.id
+                INNER JOIN meal_products prod ON prod.id = item.meal_product_id
+                WHERE meal.date = $1 AND meal.section_id = $2
+            )
+            ",
+            date, section_id,
+        )
+    } else {
+        sqlx::query!(
+            "
+            DELETE FROM meal_products
+            WHERE id IN (
+                SELECT prod.id
+                FROM user_meals meal
+                INNER JOIN meal_items item ON item.meal_id = meal.id
+                INNER JOIN meal_products prod ON prod.id = item.meal_product_id
+                WHERE meal.date = $1
+            )
+            ",
+            date,
+        )
+    }
+    .execute(db)
+    .await?;
+
+    Ok(())
+}

@@ -1,3 +1,5 @@
+#![deny(dead_code)]
+
 use serde::Deserialize;
 
 #[derive(Deserialize)]

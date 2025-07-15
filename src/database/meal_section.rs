@@ -105,13 +105,14 @@ pub async fn reset_meal_sections(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec
         UserMealSection,
         "
         INSERT INTO user_meal_sections (user_id, index, label)
-        VALUES ($1, $2, $3), ($1, $4, $5), ($1, $6, $7)
+        VALUES ($1, $2, $3), ($1, $4, $5), ($1, $6, $7), ($1, $8, $9)
         RETURNING *
         ",
         user_id,
         0, "Breakfast",
         1, "Lunch",
         2, "Dinner",
+        3, "Snacks",
     )
     .fetch_all(&mut *tx)
     .await?;

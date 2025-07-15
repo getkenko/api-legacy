@@ -1,3 +1,5 @@
+#![deny(dead_code)]
+
 use chrono::{DateTime, NaiveDate, Utc};
 use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
@@ -102,9 +104,18 @@ impl From<FullUser> for FullUserView {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateUserDetailsRequest {
     pub sex: Option<Sex>,
-    pub weight: Option<f32>,
-    pub height: Option<i32>,
+
+    pub weight_kg: Option<f32>,
+    pub weight_lb: Option<f32>,
+    pub weight_st: Option<f32>,
+
+    pub height_cm: Option<i32>,
+    pub height_ft: Option<i32>,
+    pub height_in: Option<i32>,
+
     pub date_of_birth: Option<NaiveDate>,
+    pub idle_activity: Option<i32>,
+    pub workout_activity: Option<i32>,
 }
 
 #[derive(Deserialize)]

@@ -2,7 +2,7 @@ use axum::{extract::multipart, http::StatusCode, response::{IntoResponse, Respon
 use convert_case::{Case, Casing};
 use serde::Serialize;
 
-use crate::{models::database::enums::AccountState, services::sections::USER_SECTION_LIMIT, utils::validation::{MAX_ACTIVITY, MAX_EMAIL_DOMAIN_LEN, MAX_EMAIL_USER_LEN, MAX_PASSWORD_LEN, MAX_USERNAME_LEN, MIN_ACTIVITY, MIN_PASSWORD_LEN, MIN_USERNAME_LEN, PASSWORD_DIGITS, PASSWORD_SYMBOLS}};
+use crate::{models::database::enums::AccountState, services::sections::USER_SECTION_LIMIT, utils::validation::{MAX_ACTIVITY, MAX_EMAIL_DOMAIN_LEN, MAX_EMAIL_USER_LEN, MAX_PASSWORD_LEN, MAX_USERNAME_LEN, MIN_ACTIVITY, MIN_PASSWORD_LEN, MIN_USERNAME_LEN}};
 
 pub type AppResult<T> = Result<T, AppError>;
 
@@ -15,7 +15,7 @@ pub enum ValidationError {
     // validation module
     #[error("Bad username length! It must be between {MIN_USERNAME_LEN} and {MAX_USERNAME_LEN} characters")]
     BadUsernameLength,
-    #[error("Invalid username provided, it should consist of alphanumeric characters")]
+    #[error("Invalid username provided, it should consist of a-Z, 0-9, . and _ characters. It cannot start with _, . and cannot contain repeating dots")]
     InvalidUsername,
 
     #[error("Email address has invalid format")]
@@ -25,18 +25,14 @@ pub enum ValidationError {
 
     #[error("Bad password length. It must be between {MIN_PASSWORD_LEN} and {MAX_PASSWORD_LEN} characters")]
     BadPasswordLength,
-    #[error("Password must contain at least {PASSWORD_SYMBOLS} special characters")]
-    PasswordNotEnoughSymbols,
-    #[error("Password must contain at least {PASSWORD_DIGITS} digits")]
-    PasswordNotEnoughDigits,
 
-    #[error("{0} activity has an invalid value, it must be between {MIN_ACTIVITY} and {MAX_ACTIVITY}")]
-    ActivityNotInRange(String),
+    #[error("Idle activity has an invalid value, it must be between {MIN_ACTIVITY} and {MAX_ACTIVITY}")]
+    InvalidIdleActivity,
+    #[error("Workout activity has an invalid value, it must be between {MIN_ACTIVITY} and {MAX_ACTIVITY}")]
+    InvalidWorkoutActivity,
 
     #[error("Invalid date of birth provided! It cannot be a date in future")]
     DateOfBirthInFuture,
-    #[error("Provided meal date is in the future")]
-    MealDateInFuture,
 
     // middlewares
     #[error("Failed to parse authorization token because it contains invalid symbols")]

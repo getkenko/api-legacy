@@ -1,3 +1,5 @@
+#![deny(dead_code)]
+
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
@@ -56,7 +58,7 @@ impl RegisterRequest {
             }
         };
 
-        if weight <= 0.0 {
+        if weight <= 0.0 || weight >= 10000.0 {
             return Err(ValidationError::NegativeWeight)?;
         }
 
@@ -69,7 +71,7 @@ impl RegisterRequest {
             }
         };
 
-        if height <= 0 {
+        if height <= 0 || height >= 300 {
             return Err(ValidationError::NegativeHeight)?;
         }
 

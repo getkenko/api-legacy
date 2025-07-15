@@ -1,3 +1,5 @@
+#![deny(dead_code)]
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -123,4 +125,9 @@ impl From<UserMealProduct> for UserMealProductView {
             carbohydrates: product.carbohydrates,
         }
     }
+}
+
+#[derive(Deserialize)]
+pub struct DeleteMealProductsQuery {
+    pub section_id: Option<Uuid>,
 }
