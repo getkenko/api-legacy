@@ -60,7 +60,7 @@ pub async fn update_user_details(
     if 
     details.sex.is_none() && !is_weight_provided && !is_height_provided &&
     details.date_of_birth.is_none() && details.idle_activity.is_none() &&
-    details.workout_activity.is_none()
+    details.workout_activity.is_none() && details.diet_kind.is_none()
     {
         return Err(ValidationError::NoFieldsToUpdate)?;
     }
@@ -102,6 +102,7 @@ pub async fn update_user_details(
         details.date_of_birth,
         details.idle_activity,
         details.workout_activity,
+        details.diet_kind,
     ).await?;
 
     Ok(())

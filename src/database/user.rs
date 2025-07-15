@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
+use crate::models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
 
 const DEFAULT_PROTEIN_DIST: i32 = 25;
 const DEFAULT_FAT_DIST: i32 = 25;
@@ -225,6 +225,7 @@ pub async fn update_user_details_opt(
     date_of_birth: Option<NaiveDate>,
     idle_activity: Option<i32>,
     workout_activity: Option<i32>,
+    diet_kind: Option<DietKind>,
 ) -> sqlx::Result<()> {
     let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
     let mut separated = builder.separated(", ");
@@ -257,6 +258,11 @@ pub async fn update_user_details_opt(
     if let Some(activity) = workout_activity {
         separated.push("workout_activity = ");
         separated.push_bind_unseparated(activity);
+    }
+
+    if let Some(diet) = diet_kind {
+        separated.push("diet_kind = ");
+        separated.push_bind_unseparated(diet);
     }
 
     builder

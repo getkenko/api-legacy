@@ -116,6 +116,7 @@ pub struct UpdateUserDetailsRequest {
     pub date_of_birth: Option<NaiveDate>,
     pub idle_activity: Option<i32>,
     pub workout_activity: Option<i32>,
+    pub diet_kind: Option<DietKind>,
 }
 
 #[derive(Deserialize)]
