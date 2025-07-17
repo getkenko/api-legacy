@@ -77,7 +77,7 @@ pub fn validate_password(password: &str) -> AppResult<()> {
 }
 
 pub fn is_activity_in_range(activity: i32) -> bool {
-    activity < MIN_ACTIVITY || activity > MAX_ACTIVITY
+    activity >= MIN_ACTIVITY && activity <= MAX_ACTIVITY
 }
 
 /// Validates provided date of birth, minimum 208 weeks (~4 years) in past

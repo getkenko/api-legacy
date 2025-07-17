@@ -17,10 +17,11 @@ pub struct Macros {
 
 impl Macros {
     pub fn add(&mut self, product: &UserMealProduct) {
-        self.calories += product.calories;
-        self.proteins += product.proteins;
-        self.fats += product.fats;
-        self.carbs += product.carbohydrates;
+        let mul = product.quantity as f32 / 100.0;
+        self.calories += (product.calories as f32 * mul).round() as i32;
+        self.proteins += (product.proteins as f32 * mul).round() as i32;
+        self.fats += (product.fats as f32 * mul).round() as i32;
+        self.carbs += (product.carbohydrates as f32 * mul).round() as i32;
     }
 }
 
@@ -110,7 +111,7 @@ pub struct UserMealProductView {
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
-    pub carbohydrates: i32,
+    pub carbs: i32,
 }
 
 impl From<UserMealProduct> for UserMealProductView {
@@ -122,7 +123,7 @@ impl From<UserMealProduct> for UserMealProductView {
             calories: product.calories,
             proteins: product.proteins,
             fats: product.fats,
-            carbohydrates: product.carbohydrates,
+            carbs: product.carbohydrates,
         }
     }
 }
