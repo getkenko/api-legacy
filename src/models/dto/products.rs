@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::database::product::Product;
+use crate::models::database::{enums::Unit, product::Product};
 
 #[derive(Deserialize)]
 pub struct SearchProductQuery {
@@ -16,6 +16,8 @@ pub struct ProductView {
     pub name: String,
     pub barcode: i64,
     pub ingredients: String,
+    pub unit: Unit,
+    pub quantity: i32,
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
@@ -29,6 +31,8 @@ impl From<Product> for ProductView {
             name: product.name,
             barcode: product.barcode,
             ingredients: product.ingredients,
+            unit: product.unit,
+            quantity: product.quantity,
             calories: product.calories,
             proteins: product.proteins,
             fats: product.fats,
