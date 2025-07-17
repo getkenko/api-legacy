@@ -5,7 +5,13 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb, kg_to_st_lb}};
+use crate::{
+    models::database::{
+        enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit},
+        user::FullUser,
+    },
+    utils::conversion::{cm_to_ft_in, kg_to_lb, kg_to_st_lb},
+};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -48,7 +54,7 @@ impl From<FullUser> for FullUserView {
         let avatar_url = user.avatar_url.unwrap_or(DEFAULT_AVATAR_URL.to_string());
 
         // convert weight and height to user preferred unit
-        // swaglord: i dont think api should return 'frontend' data to user
+        // i dont think api should return 'frontend' data to user
         // but holy fuck i aint adding 247821 struct fields because earth cant
         // use a single measurement system ffs
         let weight = match user.weight_unit {

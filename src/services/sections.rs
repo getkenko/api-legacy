@@ -1,9 +1,21 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::meal_section::{check_meal_section_exists, delete_meal_section, fetch_meal_sections, fetch_user_section_count, insert_meal_section, reset_meal_sections, update_meal_section}, models::{dto::{meals::UserMealSectionView, sections::{NewSectionRequest, UpdateSectionRequest}}, errors::{AppError, AppResult, ValidationError}}};
+use crate::{
+    database::meal_section::{
+        check_meal_section_exists, delete_meal_section, fetch_meal_sections,
+        fetch_user_section_count, insert_meal_section, reset_meal_sections, update_meal_section,
+    },
+    models::{
+        dto::{
+            meals::UserMealSectionView,
+            sections::{NewSectionRequest, UpdateSectionRequest},
+        },
+        errors::{AppError, AppResult, ValidationError},
+    },
+};
 
-// TODO(swaglord): move to config or somewhere idk
+// TODO: move to config or somewhere idk
 pub const USER_SECTION_LIMIT: i32 = 10;
 
 pub async fn create_new_section(
@@ -85,15 +97,11 @@ pub async fn update_user_section(
     Ok(section_view)
 }
 
-pub async fn delete_user_section(
-    db: &PgPool,
-    user_id: Uuid,
-    section_id: Uuid,
-) -> AppResult<()> {
+pub async fn delete_user_section(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
     if !check_meal_section_exists(db, user_id, section_id).await? {
         return Err(AppError::SectionNotFound);
     }
-    
+
     delete_meal_section(db, user_id, section_id).await?;
 
     Ok(())

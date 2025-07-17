@@ -6,7 +6,7 @@ use uuid::Uuid;
 // TODO: move it to a config file
 const DURATION: Duration = Duration::days(21);
 const ALGORITHM: Algorithm = Algorithm::ES256;
-// TODO(swaglord): read keys at the runtime instead of embedding them into the binary
+// TODO: read keys at the runtime instead of embedding them into the binary
 const PRIVATE_KEY: &[u8] = include_bytes!("../../keys/private.pem");
 const PUBLIC_KEY: &[u8] = include_bytes!("../../keys/public.pem");
 

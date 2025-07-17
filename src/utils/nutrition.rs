@@ -1,4 +1,4 @@
-// swaglord: idk how to name this module, either metabolism or nutrition or calorie_math or body_metrics
+// idk how to name this module, either metabolism or nutrition or calorie_math or body_metrics
 
 use crate::models::database::enums::{Sex, WeightGoal};
 
@@ -17,7 +17,7 @@ pub fn calculate_bmr(weight: f32, height: i32, age: u32, sex: Sex) -> f32 {
 }
 
 fn activity_multiplier(activity: i32) -> f32 {
-    // swaglord: im not sure whether there is a better way of doing that
+    // im not sure whether there is a better way of doing that
     match activity {
         1 => 1.1,
         2 => 1.2,
@@ -69,7 +69,11 @@ pub fn calc_target_macros(weight: f32, tdee: f32, weight_goal: WeightGoal) -> Ta
     let carbs_kcal = tdee - proteins_kcal - fats_kcal;
     let carbs = carbs_kcal / 4.0;
 
-    TargetMacros { proteins, fats, carbs }
+    TargetMacros {
+        proteins,
+        fats,
+        carbs,
+    }
 }
 
 pub fn calc_grams_from_dist(tdee: f32, dist: i32, div: f32) -> i32 {

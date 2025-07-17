@@ -4,11 +4,32 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal::{check_meal_item_exists, delete_meal_item, delete_meal_products_for_date, fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product}, meal_section::check_meal_section_exists, product::check_product_exists}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
+use crate::{
+    database::{
+        meal::{
+            check_meal_item_exists, delete_meal_item, delete_meal_products_for_date,
+            fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product,
+        },
+        meal_section::check_meal_section_exists,
+        product::check_product_exists,
+    },
+    models::{
+        database::meal::InsertMealProduct,
+        dto::meals::{
+            AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest,
+            UserMealProductView,
+        },
+        errors::{AppError, AppResult, ValidationError},
+    },
+};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
-pub async fn calc_meal_day_macros(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<MealDayMacrosResponse> {
+pub async fn calc_meal_day_macros(
+    db: &PgPool,
+    user_id: Uuid,
+    date: NaiveDate,
+) -> AppResult<MealDayMacrosResponse> {
     let products = fetch_user_meals_products(db, user_id, date).await?;
 
     let mut per_section: HashMap<Uuid, Macros> = HashMap::new();
@@ -29,7 +50,11 @@ pub async fn calc_meal_day_macros(db: &PgPool, user_id: Uuid, date: NaiveDate) -
     Ok(MealDayMacrosResponse { per_section, total })
 }
 
-pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<HashMap<Uuid, Vec<UserMealProductView>>> {
+pub async fn get_user_meals_for_date(
+    db: &PgPool,
+    user_id: Uuid,
+    date: NaiveDate,
+) -> AppResult<HashMap<Uuid, Vec<UserMealProductView>>> {
     let mut meals: HashMap<Uuid, Vec<UserMealProductView>> = HashMap::new();
 
     let meals_products = fetch_user_meals_products(db, user_id, date).await?;
@@ -38,9 +63,11 @@ pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate
         let section_id = meal_product.section_id;
         let meal_product_view = UserMealProductView::from(meal_product);
 
-        if let Some(section) = meals.get_mut(&section_id) { // already exists
+        if let Some(section) = meals.get_mut(&section_id) {
+            // already exists
             section.push(meal_product_view);
-        } else { // create new key-value pair
+        } else {
+            // create new key-value pair
             meals.insert(section_id, vec![meal_product_view]);
         }
     }
@@ -48,7 +75,7 @@ pub async fn get_user_meals_for_date(db: &PgPool, user_id: Uuid, date: NaiveDate
     Ok(meals)
 }
 
-// swaglord: im out of names vro, route handlers and services have the same function names
+// im out of names vro, route handlers and services have the same function names
 // same for database query wrappers omggg
 async fn validate_product_exists(db: &PgPool, product_id: Uuid) -> AppResult<()> {
     let exists = check_product_exists(db, product_id).await?;
@@ -105,7 +132,8 @@ pub async fn quick_add_meal_product_for_date(
     // name must be non-empty, macros must be >= 0, quantity needs to be >= 0
     if product.name.is_empty() {
         return Err(ValidationError::MealProductEmptyName)?;
-    } else if product.calories < 0 || product.proteins < 0 || product.fats < 0 || product.carbs < 0 {
+    } else if product.calories < 0 || product.proteins < 0 || product.fats < 0 || product.carbs < 0
+    {
         return Err(ValidationError::MealProductNegativeMacros)?;
     } else if product.quantity <= 0 {
         return Err(ValidationError::MealProductInvalidQuantity)?;

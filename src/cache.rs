@@ -1,7 +1,7 @@
-// TODO(swaglord): use ConnectionManager for automatic reconnections
+// TODO: use ConnectionManager for automatic reconnections
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use redis::{aio::MultiplexedConnection, AsyncCommands, SetExpiry, SetOptions};
+use redis::{AsyncCommands, SetExpiry, SetOptions, aio::MultiplexedConnection};
 use uuid::Uuid;
 
 const RATE_LIMIT_PREFIX: &str = "rate-limit";
@@ -13,7 +13,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    // swaglord: I have no idea what other return type I could set xdd
+    // I have no idea what other return type I could set xdd
     pub async fn new(url: &str) -> anyhow::Result<Self> {
         // initialize connection
         let redis = redis::Client::open(url)?;
@@ -50,10 +50,7 @@ impl Cache {
         let mut conn = self.conn.clone();
         let key = format!("{LAST_CHECK_PREFIX}_{user_id}");
 
-        let timestamp = conn
-            .get::<_, Option<i64>>(key)
-            .await?
-            .unwrap_or(1000);
+        let timestamp = conn.get::<_, Option<i64>>(key).await?.unwrap_or(1000);
         let date_time = Utc.timestamp_opt(timestamp, 0).unwrap();
 
         Ok(date_time)
@@ -64,7 +61,8 @@ impl Cache {
         let key = format!("{LAST_CHECK_PREFIX}_{user_id}");
 
         let now = Utc::now().timestamp();
-        let opt = SetOptions::default().with_expiration(SetExpiry::EX(Duration::days(3).num_seconds() as _));
+        let opt = SetOptions::default()
+            .with_expiration(SetExpiry::EX(Duration::days(3).num_seconds() as _));
         let _: () = conn.set_options(key, now, opt).await?;
 
         Ok(())

@@ -1,4 +1,4 @@
--- swaglord: or user_body_metrics?
+-- or user_body_metrics?
 CREATE TABLE user_nutrients (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     bmr FLOAT4 NOT NULL,
