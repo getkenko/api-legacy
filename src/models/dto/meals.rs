@@ -17,7 +17,13 @@ pub struct Macros {
 
 impl Macros {
     pub fn add(&mut self, product: &UserMealProduct) {
-        let mul = product.quantity as f32 / 100.0;
+        // if product is 'quick add' then we dont want to multiply the macros because they were provided 'as is'
+        let mul = if product.product_id.is_some() {
+            product.quantity as f32 / 100.0
+        } else {
+            1.0
+        };
+
         self.calories += (product.calories as f32 * mul).round() as i32;
         self.proteins += (product.proteins as f32 * mul).round() as i32;
         self.fats += (product.fats as f32 * mul).round() as i32;
@@ -108,22 +114,35 @@ pub struct UserMealProductView {
     pub product_id: Option<Uuid>,
     pub quantity: i32,
     pub name: String,
+<<<<<<< Updated upstream
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
     pub carbohydrates: i32,
+=======
+    
+    #[serde(flatten)]
+    pub macros: Macros,
+>>>>>>> Stashed changes
 }
 
 impl From<UserMealProduct> for UserMealProductView {
     fn from(product: UserMealProduct) -> Self {
+        let mut macros = Macros::default();
+        macros.add(&product);
+
         Self {
             product_id: product.product_id,
             quantity: product.quantity,
             name: product.name.clone(),
+<<<<<<< Updated upstream
             calories: product.calories,
             proteins: product.proteins,
             fats: product.fats,
             carbohydrates: product.carbohydrates,
+=======
+            macros,
+>>>>>>> Stashed changes
         }
     }
 }

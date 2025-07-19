@@ -39,12 +39,6 @@ pub fn validate_username(username: &str) -> AppResult<()> {
 }
 
 pub fn validate_email(email: &str) -> AppResult<()> {
-    // check if email is empty or doesn't contain '@'
-    if email.is_empty() || !email.contains('@') {
-        return Err(ValidationError::InvalidEmailFormat)?;
-    }
-
-    // split domain and user part
     let parts = email.split('@').collect::<Vec<_>>();
     let (user_part, domain_part) = (parts[0], parts[1]);
 
@@ -53,15 +47,8 @@ pub fn validate_email(email: &str) -> AppResult<()> {
         return Err(ValidationError::EmailTooLong)?;
     }
 
-    // check user part w/ regex
-    let user_regex = Regex::new(r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+\z").unwrap();
-    if !user_regex.is_match(user_part) {
-        return Err(ValidationError::InvalidEmailFormat)?;
-    }
-
-    // validate domain part
-    let domain_regex = Regex::new(r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$").unwrap();
-    if !domain_regex.is_match(domain_part) {
+    let regex = Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").unwrap();
+    if !regex.is_match(email) {
         return Err(ValidationError::InvalidEmailFormat)?;
     }
 

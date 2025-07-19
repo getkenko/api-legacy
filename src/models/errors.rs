@@ -18,7 +18,7 @@ pub enum ValidationError {
     #[error("Invalid username provided, it should consist of a-Z, 0-9, . and _ characters. It cannot start with _, . and cannot contain repeating dots")]
     InvalidUsername,
 
-    #[error("Email address has invalid format")]
+    #[error("Email address has an invalid format")]
     InvalidEmailFormat,
     #[error("The provided email address is too long, user part must be less than {MAX_EMAIL_USER_LEN} chars and domain part less than {MAX_EMAIL_DOMAIN_LEN} chars")]
     EmailTooLong,
