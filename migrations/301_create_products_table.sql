@@ -3,6 +3,8 @@ CREATE TABLE products (
     name TEXT NOT NULL,
     barcode BIGINT NOT NULL,
     ingredients TEXT NOT NULL,
+    unit unit_enum NOT NULL DEFAULT 'grams',
+    quantity INT NOT NULL CHECK (quantity >= 0),
     calories INT NOT NULL CHECK (calories >= 0),
     proteins INT NOT NULL CHECK (proteins >= 0),
     fats INT NOT NULL CHECK (fats >= 0),

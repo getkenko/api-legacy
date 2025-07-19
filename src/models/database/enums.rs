@@ -48,7 +48,6 @@ pub enum MealProductKind {
 pub enum WeightUnit {
     Kg,
     Lb,
-    StLb,
 }
 
 #[derive(Debug, Deserialize, sqlx::Type)]

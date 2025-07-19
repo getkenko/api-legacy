@@ -3,7 +3,7 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
-use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult, ValidationError}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}};
+use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult, ValidationError}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg}};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -27,7 +27,6 @@ pub struct RegisterRequest {
     pub weight_unit: WeightUnit,
     pub weight_kg: Option<f32>,
     pub weight_lb: Option<f32>,
-    pub weight_st: Option<f32>,
 
     pub height_unit: HeightUnit,
     pub height_cm: Option<i32>,
@@ -50,11 +49,6 @@ impl RegisterRequest {
             WeightUnit::Lb => {
                 let lb = self.weight_lb.ok_or(ValidationError::MissingLbWeight)?;
                 lb_to_kg(lb)
-            }
-            WeightUnit::StLb => {
-                let st = self.weight_st.ok_or(ValidationError::MissingStLbWeight)?;
-                let lb = self.weight_lb.ok_or(ValidationError::MissingStLbWeight)?;
-                st_lb_to_kg(st, lb)
             }
         };
 

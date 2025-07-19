@@ -5,13 +5,7 @@ use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{
-    models::database::{
-        enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit},
-        user::FullUser,
-    },
-    utils::conversion::{cm_to_ft_in, kg_to_lb, kg_to_st_lb},
-};
+use crate::{models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb}};
 
 const CDN_URL: &str = dotenv!("CDN_URL");
 const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
@@ -60,10 +54,6 @@ impl From<FullUser> for FullUserView {
         let weight = match user.weight_unit {
             WeightUnit::Kg => format!("{} kg", user.weight),
             WeightUnit::Lb => format!("{:.2} lb", kg_to_lb(user.weight)),
-            WeightUnit::StLb => {
-                let (st, lb) = kg_to_st_lb(user.weight);
-                format!("{st:.2} st {lb:.2} lb")
-            }
         };
 
         let height = match user.height_unit {

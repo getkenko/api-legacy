@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::{conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
+use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::{conversion::{ft_in_to_cm, lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = user_repo::fetch_full_user(db, user_id).await?;
@@ -17,11 +17,6 @@ fn weight_from_unit(unit: WeightUnit, details: &UpdateUserDetailsRequest) -> App
         WeightUnit::Lb => {
             let lb = details.weight_lb.ok_or(ValidationError::MissingLbWeight)?;
             lb_to_kg(lb)
-        }
-        WeightUnit::StLb => {
-            let st = details.weight_st.ok_or(ValidationError::MissingStLbWeight)?;
-            let lb = details.weight_lb.ok_or(ValidationError::MissingStLbWeight)?;
-            st_lb_to_kg(st, lb)
         }
     };
 
