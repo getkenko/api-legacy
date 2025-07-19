@@ -12,7 +12,7 @@ pub struct Macros {
     calories: i32,
     proteins: i32,
     fats: i32,
-    carbs: i32,
+    carbohydrates: i32,
 }
 
 impl Macros {
@@ -21,7 +21,7 @@ impl Macros {
         self.calories += (product.calories as f32 * mul).round() as i32;
         self.proteins += (product.proteins as f32 * mul).round() as i32;
         self.fats += (product.fats as f32 * mul).round() as i32;
-        self.carbs += (product.carbohydrates as f32 * mul).round() as i32;
+        self.carbohydrates += (product.carbohydrates as f32 * mul).round() as i32;
     }
 }
 
@@ -81,7 +81,7 @@ pub struct QuickAddMealProductRequest {
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
-    pub carbs: i32,
+    pub carbohydrates: i32,
     pub quantity: i32,
 }
 
@@ -96,7 +96,7 @@ impl From<QuickAddMealProductRequest> for InsertMealProduct {
             calories: Some(product.calories),
             proteins: Some(product.proteins),
             fats: Some(product.fats),
-            carbohydrates: Some(product.carbs),
+            carbohydrates: Some(product.carbohydrates),
         }
     }
 }
@@ -111,7 +111,7 @@ pub struct UserMealProductView {
     pub calories: i32,
     pub proteins: i32,
     pub fats: i32,
-    pub carbs: i32,
+    pub carbohydrates: i32,
 }
 
 impl From<UserMealProduct> for UserMealProductView {
@@ -123,7 +123,7 @@ impl From<UserMealProduct> for UserMealProductView {
             calories: product.calories,
             proteins: product.proteins,
             fats: product.fats,
-            carbs: product.carbohydrates,
+            carbohydrates: product.carbohydrates,
         }
     }
 }

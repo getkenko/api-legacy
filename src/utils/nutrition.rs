@@ -50,7 +50,7 @@ pub fn calculate_tdee(base_tdee: f32, goal_diff_per_week: f32, weight_goal: Weig
 pub struct TargetMacros {
     pub proteins: f32,
     pub fats: f32,
-    pub carbs: f32,
+    pub carbohydrates: f32,
 }
 
 pub fn calc_target_macros(weight: f32, tdee: f32, weight_goal: WeightGoal) -> TargetMacros {
@@ -66,13 +66,13 @@ pub fn calc_target_macros(weight: f32, tdee: f32, weight_goal: WeightGoal) -> Ta
     let fats_kcal = fat_percent * tdee;
     let fats = fats_kcal / 9.0;
 
-    let carbs_kcal = tdee - proteins_kcal - fats_kcal;
-    let carbs = carbs_kcal / 4.0;
+    let carbohydrates_kcal = tdee - proteins_kcal - fats_kcal;
+    let carbohydrates = carbohydrates_kcal / 4.0;
 
     TargetMacros {
         proteins,
         fats,
-        carbs,
+        carbohydrates,
     }
 }
 

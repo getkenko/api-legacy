@@ -132,7 +132,7 @@ pub async fn quick_add_meal_product_for_date(
     // name must be non-empty, macros must be >= 0, quantity needs to be >= 0
     if product.name.is_empty() {
         return Err(ValidationError::MealProductEmptyName)?;
-    } else if product.calories < 0 || product.proteins < 0 || product.fats < 0 || product.carbs < 0
+    } else if product.calories < 0 || product.proteins < 0 || product.fats < 0 || product.carbohydrates < 0
     {
         return Err(ValidationError::MealProductNegativeMacros)?;
     } else if product.quantity <= 0 {
