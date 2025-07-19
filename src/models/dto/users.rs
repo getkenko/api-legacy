@@ -1,14 +1,10 @@
 #![deny(dead_code)]
 
 use chrono::{DateTime, NaiveDate, Utc};
-use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb}};
-
-const CDN_URL: &str = dotenv!("CDN_URL");
-const DEFAULT_AVATAR_URL: &str = dotenv!("DEFAULT_AVATAR_URL");
+use crate::{config::CONFIG, models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb}};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,7 +41,7 @@ pub struct FullUserView {
 
 impl From<FullUser> for FullUserView {
     fn from(user: FullUser) -> Self {
-        let avatar_url = user.avatar_url.unwrap_or(DEFAULT_AVATAR_URL.to_string());
+        let avatar_url = user.avatar_url.unwrap_or(CONFIG.default_avatar.clone());
 
         // convert weight and height to user preferred unit
         // i dont think api should return 'frontend' data to user
@@ -70,7 +66,7 @@ impl From<FullUser> for FullUserView {
             username: user.username,
             display_name: user.display_name,
             email: user.email,
-            avatar_url: format!("{CDN_URL}/{avatar_url}"),
+            avatar_url: format!("{}/{avatar_url}", CONFIG.cdn_url),
 
             sex: user.sex,
             weight,

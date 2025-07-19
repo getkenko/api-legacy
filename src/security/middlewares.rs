@@ -3,11 +3,7 @@ use std::net::SocketAddr;
 use axum::{body::Body, extract::{ConnectInfo, State}, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
 use chrono::{Duration, Utc};
 
-use crate::{database::user_repo, models::errors::{AppError, AppResult, ValidationError}, routes::AppState, security::jwt::Token};
-
-// TODO: move to config file
-const MAX_REQUESTS_PER_MINUTE: u32 = 100;
-const USER_CHECK_INTERVAL: Duration = Duration::minutes(3);
+use crate::{config::CONFIG, database::user_repo, models::errors::{AppError, AppResult, ValidationError}, routes::AppState, security::jwt::Token};
 
 pub async fn auth_middleware(
     State(state): State<AppState>,
@@ -33,7 +29,7 @@ pub async fn auth_middleware(
 
     // check if token is linked to valid user
     let last_check = state.cache.user_last_check(token.sub).await?;
-    if last_check + USER_CHECK_INTERVAL <= Utc::now() {
+    if last_check + Duration::seconds(CONFIG.user_check_interval) <= Utc::now() {
         let user_exists = user_repo::check_user_exists(&state.db, token.sub).await?;
         if !user_exists {
             return Err(AppError::Unathorized);
@@ -56,14 +52,11 @@ pub async fn rate_limit_middleware(
     req: Request<Body>,
     next: Next,
 ) -> AppResult<impl IntoResponse> {
-    // TODO: create unique identifier based on something more than IP address-
-    //-so VPN users wont get rate limited by activity of others (use xxHash for keys)
-
     let ip = addr.ip().to_string();
     let req_min = state.cache.increment_requests(&ip).await?;
 
     // if req/min is above the threshold then return rate limit
-    if req_min > MAX_REQUESTS_PER_MINUTE {
+    if req_min > CONFIG.rate_limit.max_requests {
         return Err(AppError::RateLimit);
     }
 

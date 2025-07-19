@@ -1,8 +1,10 @@
 // TODO: use ConnectionManager for automatic reconnections
 
-use chrono::{DateTime, Duration, TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use redis::{AsyncCommands, SetExpiry, SetOptions, aio::MultiplexedConnection};
 use uuid::Uuid;
+
+use crate::config::CONFIG;
 
 const RATE_LIMIT_PREFIX: &str = "rate-limit";
 const LAST_CHECK_PREFIX: &str = "last-check";
@@ -40,7 +42,7 @@ impl Cache {
 
         // set expiration to one minute for new keys
         if new_value <= 1 {
-            let _: () = conn.expire(&key, 60).await?;
+            let _: () = conn.expire(&key, CONFIG.rate_limit.reset_after).await?;
         }
 
         Ok(new_value)
@@ -61,8 +63,7 @@ impl Cache {
         let key = format!("{LAST_CHECK_PREFIX}_{user_id}");
 
         let now = Utc::now().timestamp();
-        let opt = SetOptions::default()
-            .with_expiration(SetExpiry::EX(Duration::days(3).num_seconds() as _));
+        let opt = SetOptions::default().with_expiration(SetExpiry::EX(CONFIG.user_check_interval as _));
         let _: () = conn.set_options(key, now, opt).await?;
 
         Ok(())

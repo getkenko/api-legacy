@@ -1,0 +1,23 @@
+cdn_url = "http://127.0.0.1:3000/public"
+default_avatar = "avatars/default.jpg"
+
+# How often should user be checked (i.e. check if user account tied to jwt exists)
+user_check_interval = 180
+
+[bind]
+address = "127.0.0.1"
+port = 3000
+
+[cache]
+redis_url = "redis://10.0.1.22:32768/"
+
+[jwt]
+# After how many seconds should JWT expire
+duration = 1_814_400 # 21 days
+
+[rate_limit]
+# Max number of requests a user can make per interval (defined below)
+max_requests = 100
+
+# After how many seconds should the user's request count be zeroed
+reset_after = 60

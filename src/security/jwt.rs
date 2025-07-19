@@ -3,8 +3,8 @@ use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// TODO: move it to a config file
-const DURATION: Duration = Duration::days(21);
+use crate::config::CONFIG;
+
 const ALGORITHM: Algorithm = Algorithm::ES256;
 // TODO: read keys at the runtime instead of embedding them into the binary
 const PRIVATE_KEY: &[u8] = include_bytes!("../../keys/private.pem");
@@ -25,7 +25,7 @@ impl Token {
     pub fn new(user_id: Uuid, display_name: String, email: String) -> Self {
         Self {
             sub: user_id,
-            exp: (Utc::now() + DURATION).timestamp(),
+            exp: (Utc::now() + Duration::seconds(CONFIG.jwt.duration)).timestamp(),
             display_name,
             email,
         }
