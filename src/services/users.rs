@@ -3,10 +3,10 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user::{fetch_full_user, fetch_user_units, update_user_avatar, update_user_details_opt, update_user_preferences_opt}, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::{conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
+use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::{conversion::{ft_in_to_cm, lb_to_kg, st_lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
-    let user = fetch_full_user(db, user_id).await?;
+    let user = user_repo::fetch_full_user(db, user_id).await?;
     let user_view = FullUserView::from(user);
     Ok(user_view)
 }
@@ -67,7 +67,7 @@ pub async fn update_user_details(
 
     // piratesoftware code type shit
     let (weight, height) = if is_weight_provided || is_height_provided {
-        let (weight_unit, height_unit) = fetch_user_units(db, user_id).await?;
+        let (weight_unit, height_unit) = user_repo::fetch_user_units(db, user_id).await?;
 
         let weight = weight_from_unit(weight_unit, &details).map(Some)?;
         let height = height_from_unit(height_unit, &details).map(Some)?;
@@ -93,7 +93,7 @@ pub async fn update_user_details(
         }
     }
 
-    update_user_details_opt(
+    user_repo::update_user_details_opt(
         db,
         user_id,
         details.sex,
@@ -113,7 +113,7 @@ pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: Up
         return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
-    update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;
+    user_repo::update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;
 
     Ok(())
 }
@@ -139,7 +139,7 @@ pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: 
             file.write_all(&data).await?;
 
             // update user's avatar in database
-            update_user_avatar(db, user_id, Some(image_path)).await?;
+            user_repo::update_user_avatar(db, user_id, Some(image_path)).await?;
         }
     }
 
@@ -147,6 +147,6 @@ pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: 
 }
 
 pub async fn delete_user_avatar(db: &PgPool, user_id: Uuid) -> AppResult<()> {
-    update_user_avatar(db, user_id, None).await?;
+    user_repo::update_user_avatar(db, user_id, None).await?;
     Ok(())
 }

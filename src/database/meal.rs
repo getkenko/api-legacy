@@ -4,15 +4,15 @@ use uuid::Uuid;
 
 use crate::models::database::meal::{InsertMealProduct, UserMealProduct};
 
-pub async fn check_meal_item_exists(db: &PgPool, meal_product_id: Uuid) -> sqlx::Result<bool> {
-    let product = sqlx::query!(
-        r#"SELECT EXISTS ( SELECT 1 FROM meal_items WHERE meal_product_id = $1 ) AS "exists!""#,
-        meal_product_id,
+pub async fn check_meal_product_exists(db: &PgPool, product_id: Uuid) -> sqlx::Result<bool> {
+    let meal_product = sqlx::query!(
+        r#"SELECT EXISTS ( SELECT 1 FROM meal_products WHERE id = $1 ) AS "exists!""#,
+        product_id,
     )
     .fetch_one(db)
     .await?;
 
-    Ok(product.exists)
+    Ok(meal_product.exists)
 }
 
 pub async fn fetch_user_meal_product_count(
@@ -23,8 +23,8 @@ pub async fn fetch_user_meal_product_count(
     let products = sqlx::query!(
         r#"
         SELECT count(*) AS "count!"
-        FROM meal_items items
-        INNER JOIN user_meals meals ON meals.id = items.meal_id
+        FROM meal_products p
+        INNER JOIN user_meals meals ON meals.id = p.meal_id
         WHERE meals.user_id = $1 AND meals.date = $2
         "#,
         user_id, date,
@@ -46,7 +46,7 @@ pub async fn fetch_user_meals_products(
         SELECT
             um.section_id,
             mp.product_id,
-            mi.quantity,
+            mp.quantity,
             coalesce(mp.name, p.name) AS "name!",
             coalesce(mp.calories, p.calories) AS "calories!",
             coalesce(mp.proteins, p.proteins) AS "proteins!",
@@ -54,8 +54,7 @@ pub async fn fetch_user_meals_products(
             coalesce(mp.carbohydrates, p.carbohydrates) AS "carbohydrates!"
         FROM meal_products mp
         LEFT JOIN products p ON p.id = mp.product_id
-        INNER JOIN meal_items mi ON mi.meal_product_id = mp.id
-        INNER JOIN user_meals um ON um.id = mi.meal_id
+        INNER JOIN user_meals um ON um.id = mp.meal_id
         WHERE um.date = $1 AND um.user_id = $2
         "#,
         date, user_id,
@@ -72,14 +71,25 @@ pub async fn insert_meal_product(
 ) -> sqlx::Result<UserMealProduct> {
     let mut tx = db.begin().await?;
 
+    // insert row into user_meals with user_meal_sections uuid
+    let meal_id = sqlx::query!(
+        "INSERT INTO user_meals (user_id, section_id, date) VALUES ($1, $2, $3) RETURNING id",
+        user_id, product.section_id, date,
+    )
+    .fetch_one(&mut *tx)
+    .await?
+    .id;
+
     // create meal product in database
     let meal_product_id = sqlx::query!(
         "
-        INSERT INTO meal_products (kind, product_id, name, calories, proteins, fats, carbohydrates)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO meal_products (meal_id, kind, quantity, product_id, name, calories, proteins, fats, carbohydrates)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
         ",
+        meal_id,
         product.kind as _,
+        product.quantity,
         product.product_id,
         product.name,
         product.calories,
@@ -90,23 +100,6 @@ pub async fn insert_meal_product(
     .fetch_one(&mut *tx)
     .await?
     .id;
-
-    // insert row into user_meals with user_meal_sections uuid
-    let meal_id = sqlx::query!(
-        "INSERT INTO user_meals (user_id, section_id, date) VALUES ($1, $2, $3) RETURNING id",
-        user_id, product.section_id, date,
-    )
-    .fetch_one(&mut *tx)
-    .await?
-    .id;
-
-    // insert row into meal_items with user_meals uuid
-    sqlx::query!(
-        "INSERT INTO meal_items (meal_id, meal_product_id, quantity) VALUES ($1, $2, $3)",
-        meal_id, meal_product_id, product.quantity,
-    )
-    .execute(&mut *tx)
-    .await?;
 
     // select details for response
     let new_product = sqlx::query!(
@@ -138,13 +131,10 @@ pub async fn insert_meal_product(
     })
 }
 
-pub async fn delete_meal_item(db: &PgPool, meal_product_id: Uuid) -> sqlx::Result<()> {
-    sqlx::query!(
-        "DELETE FROM meal_items WHERE meal_product_id = $1",
-        meal_product_id,
-    )
-    .execute(db)
-    .await?;
+pub async fn delete_meal_product(db: &PgPool, product_id: Uuid) -> sqlx::Result<()> {
+    sqlx::query!("DELETE FROM meal_products WHERE id = $1", product_id)
+        .execute(db)
+        .await?;
 
     Ok(())
 }
@@ -157,8 +147,7 @@ pub async fn delete_meal_products_for_date(db: &PgPool, date: NaiveDate, section
             WHERE id IN (
                 SELECT prod.id
                 FROM user_meals meal
-                INNER JOIN meal_items item ON item.meal_id = meal.id
-                INNER JOIN meal_products prod ON prod.id = item.meal_product_id
+                INNER JOIN meal_products prod ON prod.meal_id = meal.id
                 WHERE meal.date = $1 AND meal.section_id = $2
             )
             ",
@@ -171,8 +160,7 @@ pub async fn delete_meal_products_for_date(db: &PgPool, date: NaiveDate, section
             WHERE id IN (
                 SELECT prod.id
                 FROM user_meals meal
-                INNER JOIN meal_items item ON item.meal_id = meal.id
-                INNER JOIN meal_products prod ON prod.id = item.meal_product_id
+                INNER JOIN meal_products prod ON prod.meal_id = meal.id
                 WHERE meal.date = $1
             )
             ",

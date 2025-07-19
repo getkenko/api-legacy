@@ -5,7 +5,7 @@ mod meals;
 mod sections;
 mod nutrients;
 
-use axum::{extract::DefaultBodyLimit, middleware, Router};
+use axum::{extract::DefaultBodyLimit, http::StatusCode, middleware, routing::get, Router};
 use sqlx::PgPool;
 use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, services::ServeDir};
 
@@ -21,6 +21,7 @@ pub fn router(db: PgPool, cache: Cache) -> Router {
     let state = AppState { db, cache };
 
     Router::new()
+        .route("/health", get(health_check))
         .nest("/auth", auth::router())
         .nest("/users", users::router(state.clone()))
         .nest("/products", products::router())
@@ -37,4 +38,8 @@ pub fn router(db: PgPool, cache: Cache) -> Router {
             // TODO: set strict cors before production
             CorsLayer::very_permissive(),
         ))
+}
+
+async fn health_check() -> StatusCode {
+    StatusCode::IM_A_TEAPOT
 }

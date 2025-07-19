@@ -114,16 +114,9 @@ pub struct UserMealProductView {
     pub product_id: Option<Uuid>,
     pub quantity: i32,
     pub name: String,
-<<<<<<< Updated upstream
-    pub calories: i32,
-    pub proteins: i32,
-    pub fats: i32,
-    pub carbohydrates: i32,
-=======
     
     #[serde(flatten)]
     pub macros: Macros,
->>>>>>> Stashed changes
 }
 
 impl From<UserMealProduct> for UserMealProductView {
@@ -135,14 +128,8 @@ impl From<UserMealProduct> for UserMealProductView {
             product_id: product.product_id,
             quantity: product.quantity,
             name: product.name.clone(),
-<<<<<<< Updated upstream
-            calories: product.calories,
-            proteins: product.proteins,
-            fats: product.fats,
-            carbohydrates: product.carbohydrates,
-=======
+            
             macros,
->>>>>>> Stashed changes
         }
     }
 }

@@ -4,24 +4,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{
-    database::{
-        meal::{
-            check_meal_item_exists, delete_meal_item, delete_meal_products_for_date,
-            fetch_user_meal_product_count, fetch_user_meals_products, insert_meal_product,
-        },
-        meal_section::check_meal_section_exists,
-        product::check_product_exists,
-    },
-    models::{
-        database::meal::InsertMealProduct,
-        dto::meals::{
-            AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest,
-            UserMealProductView,
-        },
-        errors::{AppError, AppResult, ValidationError},
-    },
-};
+use crate::{database::{meal_repo, meal_section_repo, product_repo}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
@@ -30,7 +13,7 @@ pub async fn calc_meal_day_macros(
     user_id: Uuid,
     date: NaiveDate,
 ) -> AppResult<MealDayMacrosResponse> {
-    let products = fetch_user_meals_products(db, user_id, date).await?;
+    let products = meal_repo::fetch_user_meals_products(db, user_id, date).await?;
 
     let mut per_section: HashMap<Uuid, Macros> = HashMap::new();
     let mut total = Macros::default();
@@ -57,7 +40,7 @@ pub async fn get_user_meals_for_date(
 ) -> AppResult<HashMap<Uuid, Vec<UserMealProductView>>> {
     let mut meals: HashMap<Uuid, Vec<UserMealProductView>> = HashMap::new();
 
-    let meals_products = fetch_user_meals_products(db, user_id, date).await?;
+    let meals_products = meal_repo::fetch_user_meals_products(db, user_id, date).await?;
 
     for meal_product in meals_products.into_iter() {
         let section_id = meal_product.section_id;
@@ -75,10 +58,8 @@ pub async fn get_user_meals_for_date(
     Ok(meals)
 }
 
-// im out of names vro, route handlers and services have the same function names
-// same for database query wrappers omggg
 async fn validate_product_exists(db: &PgPool, product_id: Uuid) -> AppResult<()> {
-    let exists = check_product_exists(db, product_id).await?;
+    let exists = product_repo::check_product_exists(db, product_id).await?;
     if !exists {
         return Err(AppError::ProductNotFound);
     }
@@ -87,7 +68,7 @@ async fn validate_product_exists(db: &PgPool, product_id: Uuid) -> AppResult<()>
 }
 
 async fn check_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
-    let section_exists = check_meal_section_exists(db, user_id, section_id).await?;
+    let section_exists = meal_section_repo::check_meal_section_exists(db, user_id, section_id).await?;
     if !section_exists {
         return Err(AppError::MealSectionNotFound);
     }
@@ -96,7 +77,7 @@ async fn check_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> A
 }
 
 async fn check_product_limit(db: &PgPool, user_id: Uuid, date: NaiveDate) -> AppResult<()> {
-    let count = fetch_user_meal_product_count(db, user_id, date).await?;
+    let count = meal_repo::fetch_user_meal_product_count(db, user_id, date).await?;
     if count >= USER_MEAL_PRODUCT_LIMIT {
         return Err(AppError::MealProductLimitReached);
     }
@@ -115,7 +96,7 @@ pub async fn add_meal_product_for_date(
     check_product_limit(db, user_id, date).await?;
 
     let insert = InsertMealProduct::from(product);
-    let product = insert_meal_product(db, user_id, date, insert).await?;
+    let product = meal_repo::insert_meal_product(db, user_id, date, insert).await?;
     let view = UserMealProductView::from(product);
     Ok(view)
 }
@@ -140,17 +121,17 @@ pub async fn quick_add_meal_product_for_date(
     }
 
     let insert = InsertMealProduct::from(product);
-    let product = insert_meal_product(db, user_id, date, insert).await?;
+    let product = meal_repo::insert_meal_product(db, user_id, date, insert).await?;
     let view = UserMealProductView::from(product);
     Ok(view)
 }
 
 pub async fn delete_meal_product(db: &PgPool, product_id: Uuid) -> AppResult<()> {
-    if !check_meal_item_exists(db, product_id).await? {
+    if !meal_repo::check_meal_product_exists(db, product_id).await? {
         return Err(AppError::MealProductNotFound);
     }
 
-    delete_meal_item(db, product_id).await?;
+    meal_repo::delete_meal_product(db, product_id).await?;
 
     Ok(())
 }
@@ -160,6 +141,6 @@ pub async fn delete_meal_products_date(
     date: NaiveDate,
     section_id: Option<Uuid>,
 ) -> AppResult<()> {
-    delete_meal_products_for_date(db, date, section_id).await?;
+    meal_repo::delete_meal_products_for_date(db, date, section_id).await?;
     Ok(())
 }

@@ -3,7 +3,7 @@ use std::net::SocketAddr;
 use axum::{body::Body, extract::{ConnectInfo, State}, http::{header::AUTHORIZATION, Request}, middleware::Next, response::IntoResponse};
 use chrono::{Duration, Utc};
 
-use crate::{database::user::check_user_exists, models::errors::{AppError, AppResult, ValidationError}, routes::AppState, security::jwt::Token};
+use crate::{database::user_repo, models::errors::{AppError, AppResult, ValidationError}, routes::AppState, security::jwt::Token};
 
 // TODO: move to config file
 const MAX_REQUESTS_PER_MINUTE: u32 = 100;
@@ -34,7 +34,7 @@ pub async fn auth_middleware(
     // check if token is linked to valid user
     let last_check = state.cache.user_last_check(token.sub).await?;
     if last_check + USER_CHECK_INTERVAL <= Utc::now() {
-        let user_exists = check_user_exists(&state.db, token.sub).await?;
+        let user_exists = user_repo::check_user_exists(&state.db, token.sub).await?;
         if !user_exists {
             return Err(AppError::Unathorized);
         }

@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::user_nutrients::{fetch_user_nutrients_tdee, update_user_nutrients_macros}, models::{dto::nutrients::{UpdateMacrosDistribution, UpdateMacrosTarget}, errors::{AppResult, ValidationError}}, utils::nutrition::calc_grams_from_dist};
+use crate::{database::user_nutrients_repo, models::{dto::nutrients::{UpdateMacrosDistribution, UpdateMacrosTarget}, errors::{AppResult, ValidationError}}, utils::nutrition::calc_grams_from_dist};
 
 pub async fn update_user_macros_distribution(db: &PgPool, user_id: Uuid, dist: UpdateMacrosDistribution) -> AppResult<()> {
     // make sure the values are non-negative
@@ -18,14 +18,14 @@ pub async fn update_user_macros_distribution(db: &PgPool, user_id: Uuid, dist: U
     }
 
     // fetch user TDEE (needed for calculations)
-    let tdee = fetch_user_nutrients_tdee(db, user_id).await?;
+    let tdee = user_nutrients_repo::fetch_user_nutrients_tdee(db, user_id).await?;
 
     // calculate target macros from distribution
     let protein_target = calc_grams_from_dist(tdee, dist.protein, 4.0);
     let fat_target = calc_grams_from_dist(tdee, dist.fat, 9.0);
     let carb_target = calc_grams_from_dist(tdee, dist.carb, 4.0);
 
-    update_user_nutrients_macros(db, user_id, Some(dist.protein), Some(dist.fat), Some(dist.carb), protein_target, fat_target, carb_target).await?;
+    user_nutrients_repo::update_user_nutrients_macros(db, user_id, Some(dist.protein), Some(dist.fat), Some(dist.carb), protein_target, fat_target, carb_target).await?;
 
     Ok(())
 }
@@ -37,15 +37,7 @@ pub async fn update_user_macros_target(db: &PgPool, user_id: Uuid, target: Updat
         return Err(ValidationError::NegativeMacrosTarget)?;
     }
 
-    // fetch user's TDEE for calculations
-    // let tdee = fetch_user_nutrients_tdee(db, user_id).await?;
-
-    // user enters grams -> kcal -> percent of macro kcal relative to TDEE
-    // let protein_dist = calc_dist_from_grams(tdee, target.protein, 4.0);
-    // let fat_dist = calc_dist_from_grams(tdee, target.fat, 9.0);
-    // let carb_dist = calc_dist_from_grams(tdee, target.carb, 4.0);
-
-    update_user_nutrients_macros(db, user_id, None, None, None, target.protein, target.fat, target.carb).await?;
+    user_nutrients_repo::update_user_nutrients_macros(db, user_id, None, None, None, target.protein, target.fat, target.carb).await?;
 
     Ok(())
 }

@@ -1,6 +1,9 @@
 CREATE TABLE meal_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meal_id UUID NOT NULL REFERENCES user_meals(id) ON DELETE CASCADE,
+
     kind meal_product_kind_enum NOT NULL,
+    quantity INT NOT NULL CHECK (quantity >= 0),
 
     -- from_database variant
     product_id UUID REFERENCES products(id) ON DELETE CASCADE,
