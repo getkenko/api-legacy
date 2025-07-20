@@ -3,6 +3,7 @@ use uuid::Uuid;
 use crate::models::database::enums::MealProductKind;
 
 pub struct UserMealProduct {
+    pub id: Uuid,
     pub section_id: Uuid,
     pub product_id: Option<Uuid>,
     pub quantity: i32,

@@ -110,11 +110,11 @@ impl From<QuickAddMealProductRequest> for InsertMealProduct {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserMealProductView {
+    pub id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub product_id: Option<Uuid>,
     pub quantity: i32,
     pub name: String,
-    
     #[serde(flatten)]
     pub macros: Macros,
 }
@@ -125,10 +125,10 @@ impl From<UserMealProduct> for UserMealProductView {
         macros.add(&product);
 
         Self {
+            id: product.id,
             product_id: product.product_id,
             quantity: product.quantity,
             name: product.name.clone(),
-            
             macros,
         }
     }

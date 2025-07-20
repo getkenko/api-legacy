@@ -44,6 +44,7 @@ pub async fn fetch_user_meals_products(
         UserMealProduct,
         r#"
         SELECT
+            mp.id,
             um.section_id,
             mp.product_id,
             mp.quantity,
@@ -120,6 +121,7 @@ pub async fn insert_meal_product(
     tx.commit().await?;
 
     Ok(UserMealProduct {
+        id: meal_product_id,
         section_id: product.section_id,
         product_id: product.product_id,
         quantity: product.quantity,
