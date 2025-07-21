@@ -7,6 +7,7 @@ use crate::models::database::section::SectionIcon;
 #[derive(Deserialize)]
 pub struct UpdateSectionRequest {
     pub index: Option<i32>,
+    pub icon: Option<i32>,
     pub name: Option<String>,
 }
 

@@ -56,7 +56,7 @@ pub async fn update_user_section(
     update: UpdateSectionRequest,
 ) -> AppResult<UserSectionView> {
     // validate user input
-    if update.index.is_none() && update.name.is_none() {
+    if update.index.is_none() && update.name.is_none() && update.icon.is_none() {
         return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
@@ -83,7 +83,14 @@ pub async fn update_user_section(
         }
     }
 
-    let updated_section = section_repo::update_meal_section(&mut *tx, user_id, section_id, update.index, update.name).await?;
+    if let Some(icon) = update.icon {
+        let exists = section_repo::check_icon_exists(db, icon).await?;
+        if !exists {
+            return Err(AppError::IconNotFound);
+        }
+    }
+
+    let updated_section = section_repo::update_meal_section(&mut *tx, user_id, section_id, update.index, update.name, update.icon).await?;
     tx.commit().await?;
 
     Ok(updated_section.into())

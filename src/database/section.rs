@@ -14,6 +14,17 @@ pub async fn check_meal_section_exists(db: &PgPool, user_id: Uuid, section_id: U
     Ok(section.exists)
 }
 
+pub async fn check_icon_exists(db: &PgPool, icon_id: i32) -> sqlx::Result<bool> {
+    let icon = sqlx::query!(
+        r#"SELECT EXISTS ( SELECT 1 FROM section_icons WHERE id = $1 ) AS "exists!""#,
+        icon_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(icon.exists)
+}
+
 pub async fn fetch_available_icons(db: &PgPool) -> sqlx::Result<Vec<SectionIcon>> {
     sqlx::query_as!(
         SectionIcon,
@@ -26,13 +37,13 @@ pub async fn fetch_available_icons(db: &PgPool) -> sqlx::Result<Vec<SectionIcon>
 pub async fn find_meal_section(db: impl PgExecutor<'_>, user_id: Uuid, section_id: Uuid) -> sqlx::Result<Option<UserSection>> {
     sqlx::query_as!(
         UserSection,
-        "
-        SELECT section.id, section.user_id, section.index, icon.emoji AS icon, section.name
+        r#"
+        SELECT section.id, section.user_id, section.index, icon.emoji AS "icon: Option<String>", section.name
         FROM user_sections section
-        INNER JOIN section_icons icon ON icon.id = section.icon_id
+        LEFT JOIN section_icons icon ON icon.id = section.icon_id
         WHERE section.user_id = $1 AND section.id = $2
         LIMIT 1
-        ",
+        "#,
         user_id, section_id,
     )
     .fetch_optional(db)
@@ -99,27 +110,41 @@ pub async fn update_meal_section(
     user_id: Uuid,
     section_id: Uuid,
     index: Option<i32>,
-    label: Option<String>,
+    name: Option<String>,
+    icon_id: Option<i32>,
 ) -> sqlx::Result<UserSection> {
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_sections SET ");
-    let mut separated = builder.separated(", ");
+    let mut builder = QueryBuilder::new("WITH updated AS (");
+
+    // 'WITH' block construction
+    builder.push("UPDATE user_sections SET ");
+    let mut separated = builder.separated(",");
 
     if let Some(index) = index {
-        separated.push("index = ");
+        separated.push("index=");
         separated.push_bind_unseparated(index);
     }
 
-    if let Some(label) = label {
-        separated.push("label = ");
-        separated.push_bind_unseparated(label);
+    if let Some(name) = name {
+        separated.push("name=");
+        separated.push_bind_unseparated(name);
+    }
+
+    if let Some(icon) = icon_id {
+        separated.push("icon_id=");
+        separated.push_bind_unseparated(icon);
     }
 
     builder
-        .push(" WHERE id = ")
-        .push_bind(section_id)
-        .push(" AND user_id = ")
-        .push_bind(user_id)
-        .push(" RETURNING *");
+        .push(" WHERE id=").push_bind(section_id)
+        .push(" AND user_id=").push_bind(user_id);
+
+    // finish 'WITH' block
+    builder.push(" RETURNING *) ");
+
+    // combine result with icon join
+    builder.push("SELECT section.id, section.user_id, section.index, icon.emoji AS icon, section.name ");
+    builder.push("FROM updated section ");
+    builder.push("LEFT JOIN section_icons icon ON icon.id = section.icon_id");
 
     builder
         .build_query_as::<UserSection>()

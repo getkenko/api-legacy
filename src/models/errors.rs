@@ -131,6 +131,10 @@ pub enum AppError {
     #[error("This index is already used by another section, please use unique one")]
     SectionIndexTaken,
 
+    // ICONS
+    #[error("Section icon with provided ID not found")]
+    IconNotFound,
+
     // 3RD PARTY
     #[error("Internal database error")]
     Database(#[from] sqlx::Error),
@@ -163,7 +167,7 @@ impl AppError {
             Self::UsernameTaken | Self::EmailTaken | Self::SectionIndexTaken => StatusCode::CONFLICT,
             Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
 
-            Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
+            Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound | Self::IconNotFound => StatusCode::NOT_FOUND,
             Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
 
             Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,
