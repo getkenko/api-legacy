@@ -11,9 +11,9 @@ use super::AppState;
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/products/{product_id}", delete(handle_delete_meal_product))
-        .route("/{date}", get(user_meals))
+        .route("/{date}", get(user_meals).delete(delete_meal_products))
         .route("/{date}/macros", get(meal_day_macros))
-        .route("/{date}/products", post(add_meal_product).delete(delete_meal_products))
+        .route("/{date}/products", post(add_meal_product))
         .route("/{date}/products/quick", post(quick_add_meal_product))
 
         .layer(middleware::from_fn_with_state(state, auth_middleware))
