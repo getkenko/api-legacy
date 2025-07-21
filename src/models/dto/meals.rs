@@ -5,7 +5,9 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{MealProductKind, Unit}, meal::{InsertMealProduct, UserMealProduct, UserMealSection}};
+use crate::models::database::{enums::{MealProductKind, Unit}, meal::{InsertMealProduct, UserMealProduct}, section::UserSection};
+
+const DEFAULT_SECTION_ICON: &str = "❓";
 
 #[derive(Default, Serialize)]
 pub struct Macros {
@@ -39,18 +41,20 @@ pub struct MealDayMacrosResponse {
 }
 
 #[derive(Serialize)]
-pub struct UserMealSectionView {
+pub struct UserSectionView {
     pub id: Uuid,
     pub index: i32,
-    pub label: String,
+    pub icon: String,
+    pub name: String,
 }
 
-impl From<UserMealSection> for UserMealSectionView {
-    fn from(section: UserMealSection) -> Self {
+impl From<UserSection> for UserSectionView {
+    fn from(section: UserSection) -> Self {
         Self {
             id: section.id,
             index: section.index,
-            label: section.label,
+            icon: section.icon.unwrap_or(DEFAULT_SECTION_ICON.to_string()),
+            name: section.name,
         }
     }
 }

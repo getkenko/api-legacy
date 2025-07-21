@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal_repo, meal_section_repo, product_repo}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
+use crate::{database::{meal_repo, section_repo, product_repo}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
@@ -68,7 +68,7 @@ async fn validate_product_exists(db: &PgPool, product_id: Uuid) -> AppResult<()>
 }
 
 async fn check_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
-    let section_exists = meal_section_repo::check_meal_section_exists(db, user_id, section_id).await?;
+    let section_exists = section_repo::check_meal_section_exists(db, user_id, section_id).await?;
     if !section_exists {
         return Err(AppError::SectionNotFound);
     }

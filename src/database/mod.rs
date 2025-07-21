@@ -2,7 +2,7 @@ mod user;
 mod user_nutrients;
 mod product;
 mod meal;
-mod meal_section;
+mod section;
 
 pub mod user_repo {
     pub use super::user::*;
@@ -20,6 +20,6 @@ pub mod meal_repo {
     pub use super::meal::*;
 }
 
-pub mod meal_section_repo {
-    pub use super::meal_section::*;
+pub mod section_repo {
+    pub use super::section::*;
 }
