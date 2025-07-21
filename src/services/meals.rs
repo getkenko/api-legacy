@@ -70,7 +70,7 @@ async fn validate_product_exists(db: &PgPool, product_id: Uuid) -> AppResult<()>
 async fn check_section_exists(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
     let section_exists = meal_section_repo::check_meal_section_exists(db, user_id, section_id).await?;
     if !section_exists {
-        return Err(AppError::MealSectionNotFound);
+        return Err(AppError::SectionNotFound);
     }
 
     Ok(())

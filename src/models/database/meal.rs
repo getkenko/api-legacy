@@ -1,12 +1,13 @@
 use uuid::Uuid;
 
-use crate::models::database::enums::MealProductKind;
+use crate::models::database::enums::{MealProductKind, Unit};
 
 pub struct UserMealProduct {
     pub id: Uuid,
     pub section_id: Uuid,
     pub product_id: Option<Uuid>,
     pub quantity: i32,
+    pub unit: Unit,
     pub name: String,
     pub calories: i32,
     pub proteins: i32,
@@ -21,6 +22,7 @@ pub struct InsertMealProduct {
 
     pub product_id: Option<Uuid>,
 
+    pub unit: Option<Unit>,
     pub name: Option<String>,
     pub calories: Option<i32>,
     pub proteins: Option<i32>,
@@ -29,7 +31,7 @@ pub struct InsertMealProduct {
 }
 
 #[allow(dead_code)]
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct UserMealSection {
     pub id: Uuid,
     pub user_id: Uuid,

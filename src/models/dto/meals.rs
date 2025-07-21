@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::models::database::{enums::MealProductKind, meal::{InsertMealProduct, UserMealProduct}, meal::UserMealSection};
+use crate::models::database::{enums::{MealProductKind, Unit}, meal::{InsertMealProduct, UserMealProduct, UserMealSection}};
 
 #[derive(Default, Serialize)]
 pub struct Macros {
@@ -70,6 +70,7 @@ impl From<AddMealProductRequest> for InsertMealProduct {
             quantity: product.quantity,
             kind: MealProductKind::FromDatabase,
             product_id: Some(product.product_id),
+            unit: None,
             name: None,
             calories: None,
             proteins: None,
@@ -89,6 +90,7 @@ pub struct QuickAddMealProductRequest {
     pub fats: i32,
     pub carbohydrates: i32,
     pub quantity: i32,
+    pub unit: Unit,
 }
 
 impl From<QuickAddMealProductRequest> for InsertMealProduct {
@@ -96,6 +98,7 @@ impl From<QuickAddMealProductRequest> for InsertMealProduct {
         Self {
             section_id: product.section_id,
             quantity: product.quantity,
+            unit: Some(product.unit),
             kind: MealProductKind::QuickAdd,
             product_id: None,
             name: Some(product.name),
@@ -113,6 +116,7 @@ pub struct UserMealProductView {
     pub id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub product_id: Option<Uuid>,
+    pub unit: Unit,
     pub quantity: i32,
     pub name: String,
     #[serde(flatten)]
@@ -127,6 +131,7 @@ impl From<UserMealProduct> for UserMealProductView {
         Self {
             id: product.id,
             product_id: product.product_id,
+            unit: product.unit,
             quantity: product.quantity,
             name: product.name.clone(),
             macros,

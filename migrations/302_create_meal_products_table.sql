@@ -9,6 +9,7 @@ CREATE TABLE meal_products (
     product_id UUID REFERENCES products(id) ON DELETE CASCADE,
 
     -- quick_add variant
+    unit unit_enum,
     name TEXT,
     calories INT CHECK (calories >= 0),
     proteins INT CHECK (proteins >= 0),
@@ -25,7 +26,7 @@ CREATE TABLE meal_products (
             kind = 'quick_add'
             AND name IS NOT NULL AND calories IS NOT NULL
             AND proteins IS NOT NULL AND fats IS NOT NULL
-            AND carbohydrates IS NOT NULL
+            AND carbohydrates IS NOT NULL AND unit IS NOT NULL
         )
     )
 )

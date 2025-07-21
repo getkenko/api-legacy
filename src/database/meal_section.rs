@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use crate::models::{database::meal::UserMealSection};
@@ -16,7 +16,7 @@ pub async fn check_meal_section_exists(db: &PgPool, user_id: Uuid, section_id: U
 
 pub async fn fetch_user_section_count(db: &PgPool, user_id: Uuid) -> sqlx::Result<i32> {
     let res = sqlx::query!(
-        r#"SELECT count(*) AS "count!" FROM user_meal_sections WHERE user_id = $1"#,
+        r#"SELECT count(*) AS "count!" FROM user_meal_sections WHERE user_id = $1 LIMIT 1"#,
         user_id,
     )
     .fetch_one(db)
@@ -25,14 +25,35 @@ pub async fn fetch_user_section_count(db: &PgPool, user_id: Uuid) -> sqlx::Resul
     Ok(res.count as _)
 }
 
+pub async fn find_meal_section(db: impl PgExecutor<'_>, user_id: Uuid, section_id: Uuid) -> sqlx::Result<Option<UserMealSection>> {
+    sqlx::query_as!(
+        UserMealSection,
+        "SELECT * FROM user_meal_sections WHERE user_id = $1 AND id = $2 LIMIT 1",
+        user_id, section_id,
+    )
+    .fetch_optional(db)
+    .await
+}
+
 pub async fn fetch_meal_sections(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<UserMealSection>> {
     sqlx::query_as!(
         UserMealSection,
-        "SELECT * FROM user_meal_sections WHERE user_id = $1",
+        "SELECT * FROM user_meal_sections WHERE user_id = $1 ORDER BY index",
         user_id,
     )
     .fetch_all(db)
     .await
+}
+
+pub async fn find_last_section_index(db: impl PgExecutor<'_>, user_id: Uuid, exclude_id: Uuid) -> sqlx::Result<Option<i32>> {
+    let section = sqlx::query!(
+        "SELECT index FROM user_meal_sections WHERE user_id = $1 AND id != $2 ORDER BY index DESC LIMIT 1",
+        user_id, exclude_id,
+    )
+    .fetch_optional(db)
+    .await?;
+
+    Ok(section.map(|s| s.index))
 }
 
 pub async fn insert_meal_section(
@@ -51,7 +72,7 @@ pub async fn insert_meal_section(
 }
 
 pub async fn update_meal_section(
-    db: &PgPool,
+    db: impl PgExecutor<'_>,
     user_id: Uuid,
     section_id: Uuid,
     index: Option<i32>,
@@ -83,15 +104,43 @@ pub async fn update_meal_section(
         .await
 }
 
-pub async fn delete_meal_section(db: &PgPool, user_id: Uuid, section_id: Uuid) -> sqlx::Result<()> {
-    sqlx::query!(
-        "DELETE FROM user_meal_sections WHERE id = $1 AND user_id = $2",
-        user_id, section_id,
-    )
-    .execute(db)
-    .await?;
+pub async fn update_section_indices(
+    db: impl PgExecutor<'_>,
+    user_id: Uuid,
+    increase_index: bool,
+    source_index: i32,
+    target_index: i32,
+) -> sqlx::Result<()> {
+    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_meal_sections SET index = ");
+
+    builder
+        .push(if increase_index { "index + 1" } else { "index - 1" })
+        .push(" WHERE user_id = ").push_bind(user_id).push(" AND index ");
+
+    builder
+        .push(if increase_index { ">= " } else { "<= " })
+        .push_bind(target_index)
+        .push(" AND index ")
+        .push(if increase_index { "< "} else { "> "})
+        .push_bind(source_index);
+
+    builder
+        .build()
+        .execute(db)
+        .await?;
 
     Ok(())
+}
+
+pub async fn delete_meal_section(db: impl PgExecutor<'_>, user_id: Uuid, section_id: Uuid) -> sqlx::Result<i32> {
+    let section = sqlx::query!(
+        "DELETE FROM user_meal_sections WHERE id = $1 AND user_id = $2 RETURNING index",
+        section_id, user_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(section.index)
 }
 
 pub async fn reset_meal_sections(db: &PgPool, user_id: Uuid) -> sqlx::Result<Vec<UserMealSection>> {

@@ -62,10 +62,21 @@ pub async fn update_user_section(
         return Err(ValidationError::NoFieldsToUpdate)?;
     }
 
-    if let Some(index) = update.index {
-        if index < 0 || index >= USER_SECTION_LIMIT {
+    let mut tx = db.begin().await?;
+
+    let section = meal_section_repo::find_meal_section(&mut *tx, user_id, section_id)
+        .await?
+        .ok_or(AppError::SectionNotFound)?;
+    
+    if let Some(target_index) = update.index {
+        let increase = section.index - target_index >= 0;
+        let last_section_index = meal_section_repo::find_last_section_index(&mut *tx, user_id, section_id).await?.unwrap_or(0);
+
+        if target_index > USER_SECTION_LIMIT || target_index < 0 || target_index > last_section_index {
             return Err(ValidationError::InvalidSectionIndex)?;
         }
+
+        meal_section_repo::update_section_indices(&mut *tx, user_id, increase, section.index, target_index).await?;
     }
 
     if let Some(label) = &update.label {
@@ -74,14 +85,10 @@ pub async fn update_user_section(
         }
     }
 
-    // check if meal section id is correct
-    if !meal_section_repo::check_meal_section_exists(db, user_id, section_id).await? {
-        return Err(AppError::SectionNotFound);
-    }
+    let updated_section = meal_section_repo::update_meal_section(&mut *tx, user_id, section_id, update.index, update.label).await?;
+    tx.commit().await?;
 
-    let section = meal_section_repo::update_meal_section(db, user_id, section_id, update.index, update.label).await?;
-    let section_view = UserMealSectionView::from(section);
-    Ok(section_view)
+    Ok(updated_section.into())
 }
 
 pub async fn delete_user_section(db: &PgPool, user_id: Uuid, section_id: Uuid) -> AppResult<()> {
@@ -89,7 +96,14 @@ pub async fn delete_user_section(db: &PgPool, user_id: Uuid, section_id: Uuid) -
         return Err(AppError::SectionNotFound);
     }
 
-    meal_section_repo::delete_meal_section(db, user_id, section_id).await?;
+    let mut tx = db.begin().await?;
+
+    let deleted_index = meal_section_repo::delete_meal_section(&mut *tx, user_id, section_id).await?;
+
+    // update indices so they're still in sequence
+    meal_section_repo::update_section_indices(&mut *tx, user_id, false, deleted_index, 999).await?;
+
+    tx.commit().await?;
 
     Ok(())
 }

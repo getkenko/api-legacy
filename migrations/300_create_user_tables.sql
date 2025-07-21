@@ -61,7 +61,7 @@ CREATE TABLE user_meal_sections (
     index INT NOT NULL,
     label TEXT NOT NULL,
 
-    UNIQUE(user_id, index)
+    UNIQUE(user_id, index) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE user_meals (

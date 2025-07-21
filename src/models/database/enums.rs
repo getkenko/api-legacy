@@ -91,10 +91,11 @@ pub enum DietKind {
     Classic,
 }
 
-#[derive(Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "unit_enum", rename_all = "snake_case")]
 pub enum Unit {
+    #[serde(rename = "g")]
     Grams,
+    #[serde(rename = "ml")]
     Milliliters,
 }

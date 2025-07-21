@@ -77,7 +77,7 @@ pub enum ValidationError {
     NegativeMacrosTarget,
 
     // sections
-    #[error("Invalid section index! It must be within the (0 - {USER_SECTION_LIMIT}) range")]
+    #[error("Invalid section index! It must be within the between 0 and {USER_SECTION_LIMIT} and can't exceed last section's index")]
     InvalidSectionIndex,
     #[error("Invalid section name! It cannot be empty")]
     SectionHasEmptyName,
@@ -118,8 +118,6 @@ pub enum AppError {
     ProductNotFound,
 
     // MEALS
-    #[error("Meal section with this ID not found")]
-    MealSectionNotFound,
     #[error("Meal product with this ID not found")]
     MealProductNotFound,
     #[error("You have reached the maximum amount of meal products for this day")]
@@ -165,7 +163,7 @@ impl AppError {
             Self::UsernameTaken | Self::EmailTaken | Self::SectionIndexTaken => StatusCode::CONFLICT,
             Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
 
-            Self::MealSectionNotFound | Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
+            Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound => StatusCode::NOT_FOUND,
             Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
 
             Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,

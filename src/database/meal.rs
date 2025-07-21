@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::database::meal::{InsertMealProduct, UserMealProduct};
+use crate::models::database::{enums::Unit, meal::{InsertMealProduct, UserMealProduct}};
 
 pub async fn check_meal_product_exists(db: &PgPool, product_id: Uuid) -> sqlx::Result<bool> {
     let meal_product = sqlx::query!(
@@ -48,6 +48,7 @@ pub async fn fetch_user_meals_products(
             um.section_id,
             mp.product_id,
             mp.quantity,
+            coalesce(mp.unit, p.unit) AS "unit!: _",
             coalesce(mp.name, p.name) AS "name!",
             coalesce(mp.calories, p.calories) AS "calories!",
             coalesce(mp.proteins, p.proteins) AS "proteins!",
@@ -84,13 +85,14 @@ pub async fn insert_meal_product(
     // create meal product in database
     let meal_product_id = sqlx::query!(
         "
-        INSERT INTO meal_products (meal_id, kind, quantity, product_id, name, calories, proteins, fats, carbohydrates)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO meal_products (meal_id, kind, quantity, unit, product_id, name, calories, proteins, fats, carbohydrates)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id
         ",
         meal_id,
         product.kind as _,
         product.quantity,
+        product.unit as _,
         product.product_id,
         product.name,
         product.calories,
@@ -108,7 +110,7 @@ pub async fn insert_meal_product(
         SELECT
             coalesce(mp.name, p.name) AS "name!", coalesce(mp.calories, p.calories) AS "calories!",
             coalesce(mp.proteins, p.proteins) AS "proteins!", coalesce(mp.fats, p.fats) AS "fats!",
-            coalesce(mp.carbohydrates, p.carbohydrates) AS "carbohydrates!"
+            coalesce(mp.carbohydrates, p.carbohydrates) AS "carbohydrates!", coalesce(mp.unit, p.unit) AS "unit!: Unit"
         FROM meal_products mp
         LEFT JOIN products p ON p.id = mp.product_id
         WHERE mp.id = $1
@@ -125,6 +127,7 @@ pub async fn insert_meal_product(
         section_id: product.section_id,
         product_id: product.product_id,
         quantity: product.quantity,
+        unit: new_product.unit,
         name: new_product.name,
         calories: new_product.calories,
         proteins: new_product.proteins,
