@@ -5,7 +5,7 @@ use crate::{database::user_repo, models::{database::{enums::AccountState, user::
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
-    let user = user_repo::find_user(db, &creds.email)
+    let user = user_repo::find_user_by_email(db, &creds.email)
         .await?
         .ok_or(AppError::InvalidCredentials)?;
 

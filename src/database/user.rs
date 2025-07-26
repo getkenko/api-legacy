@@ -19,8 +19,23 @@ pub async fn check_user_exists(db: &PgPool, user_id: Uuid) -> sqlx::Result<bool>
     Ok(user.exists)
 }
 
-pub async fn find_user(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
-    let user = sqlx::query_as!(
+pub async fn find_user(db: &PgPool, user_id: Uuid) -> sqlx::Result<Option<User>> {
+    sqlx::query_as!(
+        User,
+        r#"
+        SELECT id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+        "#,
+        user_id,
+    )
+    .fetch_optional(db)
+    .await
+}
+
+pub async fn find_user_by_email(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
+    sqlx::query_as!(
         User,
         r#"
         SELECT id, username, display_name, email, password, avatar_url, account_state AS "account_state: _", created_at
@@ -31,13 +46,11 @@ pub async fn find_user(db: &PgPool, email: &str) -> sqlx::Result<Option<User>> {
         email,
     )
     .fetch_optional(db)
-    .await?;
-
-    Ok(user)
+    .await
 }
 
 pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
-    let info = sqlx::query_as!(
+    sqlx::query_as!(
         FullUser,
         r#"
         SELECT
@@ -81,13 +94,11 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
         id,
     )
     .fetch_one(db)
-    .await?;
-
-    Ok(info)
+    .await
 }
 
 pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> sqlx::Result<UserConflicts> {
-    let conflicts = sqlx::query_as!(
+    sqlx::query_as!(
         UserConflicts,
         r#"
         SELECT
@@ -97,9 +108,7 @@ pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> s
         username, email,
     )
     .fetch_one(db)
-    .await?;
-
-    Ok(conflicts)
+    .await
 }
 
 pub async fn fetch_user_units(db: &PgPool, user_id: Uuid) -> sqlx::Result<(WeightUnit, HeightUnit)> {
@@ -298,6 +307,17 @@ pub async fn update_user_preferences_opt(
         .push_bind(user_id);
 
     builder.build().execute(db).await?;
+
+    Ok(())
+}
+
+pub async fn delete_user(db: &PgPool, user_id: Uuid) -> sqlx::Result<()> {
+    sqlx::query!(
+        "DELETE FROM users WHERE id = $1",
+        user_id,
+    )
+    .execute(db)
+    .await?;
 
     Ok(())
 }

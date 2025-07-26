@@ -67,9 +67,9 @@ pub fn is_activity_in_range(activity: i32) -> bool {
     activity >= MIN_ACTIVITY && activity <= MAX_ACTIVITY
 }
 
-/// Validates provided date of birth, minimum 208 weeks (~4 years) in past
+/// Validates provided date of birth
 pub fn validate_date_of_birth(dob: NaiveDate) -> AppResult<()> {
-    if Utc::now().date_naive() - dob < TimeDelta::weeks(208) { // 208 weeks ~ 4 years
+    if Utc::now().date_naive() - dob < TimeDelta::days(0) {
         return Err(ValidationError::DateOfBirthInFuture)?;
     }
 

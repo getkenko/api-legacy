@@ -20,20 +20,13 @@ pub async fn create_new_section(
         return Err(AppError::SectionLimitReached);
     }
 
-    let section = match section_repo::insert_meal_section(db, user_id, last_section_index + 1, section.name).await {
-        Ok(s) => UserSectionView::from(s),
-        Err(why) => {
-            if let Some(err) = why.as_database_error() {
-                if err.is_unique_violation() {
-                    return Err(AppError::SectionIndexTaken);
-                }
-            }
+    // check if icon exists
+    if !section_repo::check_icon_exists(db, section.icon).await? {
+        return Err(AppError::IconNotFound);
+    }
 
-            return Err(AppError::Database(why));
-        }
-    };
-
-    Ok(section)
+    let section = section_repo::insert_meal_section(db, user_id, last_section_index + 1, section.name, section.icon).await?;
+    Ok(section.into())
 }
 
 pub async fn get_user_sections_layout(

@@ -86,20 +86,21 @@ pub async fn insert_meal_section(
     user_id: Uuid,
     index: i32,
     name: String,
+    icon_id: i32,
 ) -> sqlx::Result<UserSection> {
     sqlx::query_as!(
         UserSection,
         "
         WITH inserted AS (
-            INSERT INTO user_sections (user_id, index, name)
-            VALUES ($1, $2, $3)
+            INSERT INTO user_sections (user_id, index, icon_id, name)
+            VALUES ($1, $2, $3, $4)
             RETURNING *
         )
         SELECT section.id, section.user_id, section.index, icon.emoji AS icon, section.name
         FROM inserted section
         LEFT JOIN section_icons icon ON icon.id = section.icon_id
         ",
-        user_id, index, name,
+        user_id, index, icon_id, name,
     )
     .fetch_one(db)
     .await

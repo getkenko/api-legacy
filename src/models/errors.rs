@@ -123,6 +123,12 @@ pub enum AppError {
     #[error("You have reached the maximum amount of meal products for this day")]
     MealProductLimitReached,
 
+    // USERS
+    #[error("User not found")]
+    UserNotFound,
+    #[error("Incorrect password provided")]
+    IncorrectPassword,
+
     // SECTIONS
     #[error("Section with this ID could not be found")]
     SectionNotFound,
@@ -163,11 +169,12 @@ impl AppError {
         match self {
             Self::Validation(_) => StatusCode::BAD_REQUEST,
 
-            Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) => StatusCode::UNAUTHORIZED,
+            Self::Unathorized | Self::InvalidCredentials | Self::AccountNotActive(_) | Self::IncorrectPassword => StatusCode::UNAUTHORIZED,
             Self::UsernameTaken | Self::EmailTaken | Self::SectionIndexTaken => StatusCode::CONFLICT,
             Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
 
-            Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound | Self::IconNotFound => StatusCode::NOT_FOUND,
+            Self::MealProductNotFound | Self::ProductNotFound | Self::SectionNotFound |
+            Self::IconNotFound | Self::UserNotFound => StatusCode::NOT_FOUND,
             Self::SectionLimitReached | Self::MealProductLimitReached => StatusCode::UNPROCESSABLE_ENTITY,
 
             Self::Io(_) | Self::Database(_) | Self::Redis(_) | Self::Crypto(_) | Self::Jwt(_) | Self::Multipart(_) => StatusCode::INTERNAL_SERVER_ERROR,

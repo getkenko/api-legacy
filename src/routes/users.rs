@@ -1,12 +1,12 @@
 use axum::{extract::{Multipart, State}, http::StatusCode, middleware, routing::{get, patch, post}, Extension, Json, Router};
 
-use crate::{models::{dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::users::{delete_user_avatar, get_full_user_info, update_user_avatar_from_form, update_user_details, update_user_preferences}};
+use crate::{models::{dto::users::{DeleteAccountRequest, FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::users::{delete_user_account, delete_user_avatar, get_full_user_info, update_user_avatar_from_form, update_user_details, update_user_preferences}};
 
 use super::AppState;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/me", get(user_info))
+        .route("/me", get(user_info).delete(delete_account))
         .route("/me/details", patch(update_details))
         .route("/me/preferences", patch(update_preferences))
         .route("/me/avatar", post(update_avatar).delete(delete_avatar))
@@ -54,5 +54,14 @@ async fn delete_avatar(
     Extension(token): Extension<Token>,
 ) -> AppResult<StatusCode> {
     delete_user_avatar(&state.db, token.sub).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn delete_account(
+    State(state): State<AppState>,
+    Extension(token): Extension<Token>,
+    Json(body): Json<DeleteAccountRequest>,
+) -> AppResult<StatusCode> {
+    delete_user_account(&state.db, token.sub, &body.password).await?;
     Ok(StatusCode::NO_CONTENT)
 }

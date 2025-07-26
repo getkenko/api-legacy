@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppResult, ValidationError}}, utils::{conversion::{ft_in_to_cm, lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
+use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult, ValidationError}}, security::password::verify_password, utils::{conversion::{ft_in_to_cm, lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = user_repo::fetch_full_user(db, user_id).await?;
@@ -143,5 +143,22 @@ pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: 
 
 pub async fn delete_user_avatar(db: &PgPool, user_id: Uuid) -> AppResult<()> {
     user_repo::update_user_avatar(db, user_id, None).await?;
+    Ok(())
+}
+
+pub async fn delete_user_account(db: &PgPool, user_id: Uuid, password: &str) -> AppResult<()> {
+    let user = user_repo::find_user(db, user_id)
+        .await?
+        .ok_or(AppError::UserNotFound)?;
+    
+    // check if password matches
+    let password_matches = verify_password(password, &user.password).map_err(AppError::Crypto)?;
+    if !password_matches {
+        return Err(AppError::IncorrectPassword);
+    }
+
+    // delete user's account
+    user_repo::delete_user(db, user_id).await?;
+
     Ok(())
 }

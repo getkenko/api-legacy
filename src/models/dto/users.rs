@@ -116,3 +116,8 @@ pub struct UpdateUserPreferencesRequest {
     pub theme: Option<Theme>,
     pub language: Option<Language>,
 }
+
+#[derive(Deserialize)]
+pub struct DeleteAccountRequest {
+    pub password: String,
+}

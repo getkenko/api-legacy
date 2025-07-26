@@ -14,6 +14,7 @@ pub struct UpdateSectionRequest {
 #[derive(Deserialize)]
 pub struct NewSectionRequest {
     pub name: String,
+    pub icon: i32,
 }
 
 #[derive(Serialize)]
