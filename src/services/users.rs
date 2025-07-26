@@ -57,7 +57,7 @@ pub async fn update_user_details(
     details.date_of_birth.is_none() && details.idle_activity.is_none() &&
     details.workout_activity.is_none() && details.diet_kind.is_none()
     {
-        return Err(ValidationError::NoFieldsToUpdate)?;
+        return Err(ValidationError::NoFieldsProvided)?;
     }
 
     // piratesoftware code type shit
@@ -105,7 +105,7 @@ pub async fn update_user_details(
 
 pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: UpdateUserPreferencesRequest) -> AppResult<()> {
     if preferences.theme.is_none() && preferences.language.is_none() {
-        return Err(ValidationError::NoFieldsToUpdate)?;
+        return Err(ValidationError::NoFieldsProvided)?;
     }
 
     user_repo::update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;

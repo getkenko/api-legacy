@@ -4,12 +4,13 @@ use axum::{extract::{Path, Query, State}, http::StatusCode, middleware, response
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-use crate::{models::{dto::meals::{AddMealProductRequest, DeleteMealProductsQuery, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::meals::{add_meal_product_for_date, calc_meal_day_macros, delete_meal_product, delete_meal_products_date, get_user_meals_for_date, quick_add_meal_product_for_date}};
+use crate::{models::{dto::meals::{AddMealProductRequest, CalorieStreakResponse, DeleteMealProductsQuery, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::AppResult}, security::{jwt::Token, middlewares::auth_middleware}, services::meals::{add_meal_product_for_date, calc_meal_day_macros, delete_meal_product, delete_meal_products_date, get_user_calorie_streak, get_user_meals_for_date, quick_add_meal_product_for_date}};
 
 use super::AppState;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
+        .route("/streak", get(get_calorie_streak))
         .route("/products/{product_id}", delete(handle_delete_meal_product))
         .route("/{date}", get(user_meals).delete(delete_meal_products))
         .route("/{date}/macros", get(meal_day_macros))
@@ -17,6 +18,14 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/{date}/products/quick", post(quick_add_meal_product))
 
         .layer(middleware::from_fn_with_state(state, auth_middleware))
+}
+
+async fn get_calorie_streak(
+    State(state): State<AppState>,
+    Extension(token): Extension<Token>,
+) -> AppResult<Json<CalorieStreakResponse>> {
+    let res = get_user_calorie_streak(&state.db, token.sub).await?;
+    Ok(Json(res))
 }
 
 async fn meal_day_macros(

@@ -50,7 +50,7 @@ pub async fn update_user_section(
 ) -> AppResult<UserSectionView> {
     // validate user input
     if update.index.is_none() && update.name.is_none() && update.icon.is_none() {
-        return Err(ValidationError::NoFieldsToUpdate)?;
+        return Err(ValidationError::NoFieldsProvided)?;
     }
 
     let mut tx = db.begin().await?;

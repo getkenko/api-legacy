@@ -59,9 +59,10 @@ pub struct FullUser {
     pub carb_dist: Option<i32>,
 }
 
+#[derive(sqlx::FromRow)]
 pub struct UserConflicts {
-    pub username_taken: bool,
-    pub email_taken: bool,
+    pub username_taken: Option<bool>,
+    pub email_taken: Option<bool>,
 }
 
 pub struct InsertUser {

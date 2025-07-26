@@ -97,18 +97,37 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
     .await
 }
 
-pub async fn fetch_user_conflicts(db: &PgPool, username: &str, email: &str) -> sqlx::Result<UserConflicts> {
-    sqlx::query_as!(
-        UserConflicts,
-        r#"
-        SELECT
-            EXISTS( SELECT 1 FROM users WHERE username = $1 ) AS "username_taken!",
-            EXISTS( SELECT 1 FROM users WHERE email = $2 ) AS "email_taken!"
-        "#,
-        username, email,
-    )
-    .fetch_one(db)
-    .await
+pub async fn fetch_user_conflicts_opt(
+    db: &PgPool,
+    username: Option<String>,
+    email: Option<String>,
+) -> sqlx::Result<UserConflicts> {
+    let mut builder = QueryBuilder::new("SELECT ");
+    let mut separated = builder.separated(", ");
+
+    if let Some(username) = username {
+        separated
+            .push("EXISTS ( SELECT 1 FROM users WHERE username = ")
+            .push_bind_unseparated(username)
+            .push_unseparated(" ) AS username_taken");
+    } else {
+        // we need to do a fallback otherwise error will be thrown because SQLx has fucked up struct mapping :DDDDDDD
+        separated.push("NULL::bool AS username_taken");
+    }
+
+    if let Some(email) = email {
+        separated
+            .push("EXISTS ( SELECT 1 FROM users WHERE email = ")
+            .push_bind_unseparated(email)
+            .push_unseparated(" ) AS email_taken");
+    } else {
+        separated.push("NULL::bool AS email_taken");
+    }
+
+    builder
+        .build_query_as::<UserConflicts>()
+        .fetch_one(db)
+        .await
 }
 
 pub async fn fetch_user_units(db: &PgPool, user_id: Uuid) -> sqlx::Result<(WeightUnit, HeightUnit)> {
@@ -126,6 +145,17 @@ pub async fn fetch_user_units(db: &PgPool, user_id: Uuid) -> sqlx::Result<(Weigh
     .await?;
 
     Ok((user.weight_unit, user.height_unit))
+}
+
+pub async fn fetch_user_tdee(db: &PgPool, user_id: Uuid) -> sqlx::Result<f32> {
+    let user = sqlx::query!(
+        "SELECT tdee FROM user_nutrients WHERE user_id = $1",
+        user_id,
+    )
+    .fetch_one(db)
+    .await?;
+
+    Ok(user.tdee)
 }
 
 pub async fn insert_user(db: &PgPool, user: InsertUser, nutrition: UserNutrition) -> sqlx::Result<()> {

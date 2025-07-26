@@ -2,6 +2,7 @@
 
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::{models::{database::{enums::{DietKind, HeightUnit, Sex, UserOrigin, WeightGoal, WeightUnit}, user::{InsertUser, UserConflicts}}, errors::{AppError, AppResult, ValidationError}}, security::password::hash_password, utils::conversion::{ft_in_to_cm, lb_to_kg}};
 
@@ -103,22 +104,23 @@ impl TryFrom<RegisterRequest> for InsertUser {
 
 #[derive(Deserialize)]
 pub struct CheckAvailabilityQuery {
-    pub username: String,
-    pub email: String,
+    pub username: Option<String>,
+    pub email: Option<String>,
 }
 
+#[skip_serializing_none]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserConflictsView {
-    pub username_available: bool,
-    pub email_available: bool,
+    pub username_available: Option<bool>,
+    pub email_available: Option<bool>,
 }
 
 impl From<UserConflicts> for UserConflictsView {
     fn from(conflicts: UserConflicts) -> Self {
         Self {
-            username_available: !conflicts.username_taken,
-            email_available: !conflicts.email_taken,
+            username_available: conflicts.username_taken.map(|u| !u),
+            email_available: conflicts.email_taken.map(|e| !e),
         }
     }
 }

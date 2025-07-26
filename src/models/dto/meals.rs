@@ -11,10 +11,10 @@ const DEFAULT_SECTION_ICON: &str = "❓";
 
 #[derive(Default, Serialize)]
 pub struct Macros {
-    calories: i32,
-    proteins: i32,
-    fats: i32,
-    carbohydrates: i32,
+    pub calories: i32,
+    pub proteins: i32,
+    pub fats: i32,
+    pub carbohydrates: i32,
 }
 
 impl Macros {
@@ -146,4 +146,9 @@ impl From<UserMealProduct> for UserMealProductView {
 #[derive(Deserialize)]
 pub struct DeleteMealProductsQuery {
     pub section_id: Option<Uuid>,
+}
+
+#[derive(Serialize)]
+pub struct CalorieStreakResponse {
+    pub days: u32,
 }

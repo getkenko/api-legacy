@@ -9,8 +9,8 @@ pub type AppResult<T> = Result<T, AppError>;
 #[derive(Debug, thiserror::Error, strum_macros::AsRefStr, strum_macros::IntoStaticStr)]
 pub enum ValidationError {
     // shared
-    #[error("No fields provided to be updated")]
-    NoFieldsToUpdate,
+    #[error("Not a single optional field was provided")]
+    NoFieldsProvided,
 
     // validation module
     #[error("Bad username length! It must be between {MIN_USERNAME_LEN} and {MAX_USERNAME_LEN} characters")]

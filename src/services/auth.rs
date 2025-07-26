@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sqlx::PgPool;
 
-use crate::{database::user_repo, models::{database::{enums::AccountState, user::{InsertUser, UserNutrition}}, dto::auth::{LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult, ValidationError}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth, validate_email, validate_password, validate_username}}};
+use crate::{database::user_repo, models::{database::{enums::AccountState, user::{InsertUser, UserNutrition}}, dto::auth::{CheckAvailabilityQuery, LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult, ValidationError}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth, validate_email, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
@@ -37,10 +37,10 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     }
 
     // check if username and/or email is already used by someone else
-    let conflicts = user_repo::fetch_user_conflicts(db, &user_data.username, &user_data.email).await?;
-    if conflicts.username_taken {
+    let conflicts = user_repo::fetch_user_conflicts_opt(db, Some(user_data.username.clone()), Some(user_data.email.clone())).await?;
+    if conflicts.username_taken.unwrap() {
         return Err(AppError::UsernameTaken);
-    } else if conflicts.email_taken {
+    } else if conflicts.email_taken.unwrap() {
         return Err(AppError::EmailTaken);
     }
 
@@ -73,8 +73,12 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     Ok(())
 }
 
-pub async fn check_user_credentials_availability(db: &PgPool, username: &str, email: &str) -> AppResult<UserConflictsView> {
-    let conflicts = user_repo::fetch_user_conflicts(db, username, email).await?;
+pub async fn check_user_credentials_availability(db: &PgPool, to_check: CheckAvailabilityQuery) -> AppResult<UserConflictsView> {
+    if to_check.email.is_none() && to_check.username.is_none() {
+        return Err(ValidationError::NoFieldsProvided)?;
+    }
+
+    let conflicts = user_repo::fetch_user_conflicts_opt(db, to_check.username, to_check.email).await?;
     let view = UserConflictsView::from(conflicts);
     Ok(view)
 }

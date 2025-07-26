@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use chrono::NaiveDate;
+use chrono::{Duration, NaiveDate, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::{database::{meal_repo, section_repo, product_repo}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
+use crate::{database::{meal_repo, product_repo, section_repo, user_repo}, models::{database::meal::InsertMealProduct, dto::meals::{AddMealProductRequest, CalorieStreakResponse, Macros, MealDayMacrosResponse, QuickAddMealProductRequest, UserMealProductView}, errors::{AppError, AppResult, ValidationError}}};
 
 const USER_MEAL_PRODUCT_LIMIT: i64 = 100;
 
@@ -31,6 +31,27 @@ pub async fn calc_meal_day_macros(
     }
 
     Ok(MealDayMacrosResponse { per_section, total })
+}
+
+pub async fn get_user_calorie_streak(db: &PgPool, user_id: Uuid) -> AppResult<CalorieStreakResponse> {
+    let user_tdee = user_repo::fetch_user_tdee(db, user_id).await?;
+
+    let mut days = 0;
+    loop {
+        let date = (Utc::now() - Duration::days(days as i64 + 1)).date_naive();
+        let calories = calc_meal_day_macros(db, user_id, date)
+            .await?
+            .total
+            .calories;
+
+        if calories >= user_tdee as i32 {
+            days += 1;
+        } else {
+            break;
+        }
+    }
+
+    Ok(CalorieStreakResponse { days })
 }
 
 pub async fn get_user_meals_for_date(

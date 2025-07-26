@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1.46", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 axum = { version = "0.8", features = ["tracing", "multipart"] }
 tower-http = { version = "0.6", default-features = false, features = ["cors", "fs", "limit"] }
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "bigdecimal"] }
@@ -18,6 +18,7 @@ strum = "0.27"
 strum_macros = "0.27"
 convert_case = "0.8"
 serde = { version = "1.0", features = ["derive"] }
+serde_with = "3.14"
 dotenvy_macro = "0.15"
 thiserror = "2.0"
 infer = "0.19"

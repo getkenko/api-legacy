@@ -31,6 +31,6 @@ async fn check_availability(
     State(state): State<AppState>,
     Query(to_check): Query<CheckAvailabilityQuery>,
 ) -> AppResult<Json<UserConflictsView>> {
-    let availability = check_user_credentials_availability(&state.db, &to_check.username, &to_check.email).await?;
+    let availability = check_user_credentials_availability(&state.db, to_check).await?;
     Ok(Json(availability))
 }
