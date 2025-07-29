@@ -52,13 +52,16 @@ pub async fn update_user_details(
     let is_weight_provided = details.weight_kg.is_some() || details.weight_lb.is_some() || details.weight_st.is_some();
     let is_height_provided = details.height_cm.is_some() || details.height_ft.is_some() || details.height_in.is_some();
 
-    if 
-    details.sex.is_none() && !is_weight_provided && !is_height_provided &&
+    if details.sex.is_none() && !is_weight_provided && !is_height_provided &&
     details.date_of_birth.is_none() && details.idle_activity.is_none() &&
     details.workout_activity.is_none() && details.diet_kind.is_none()
     {
         return Err(ValidationError::NoFieldsProvided)?;
     }
+
+    // fetch user details needed for BMR/TDEE calc
+    let mut user = user_repo::fetch_user_details_with_goals(db, user_id).await?;
+    let mut update_nutrients = false;
 
     // piratesoftware code type shit
     let (weight, height) = if is_weight_provided || is_height_provided {
@@ -67,6 +70,7 @@ pub async fn update_user_details(
         let weight = weight_from_unit(weight_unit, &details).map(Some)?;
         let height = height_from_unit(height_unit, &details).map(Some)?;
 
+        update_nutrients = true;
         (weight, height)
     } else {
         (None, None)
@@ -74,18 +78,29 @@ pub async fn update_user_details(
 
     if let Some(dob) = details.date_of_birth {
         validate_date_of_birth(dob)?;
+        user.date_of_birth = dob;
+        update_nutrients = true;
     }
 
     if let Some(activity) = details.idle_activity {
         if !is_activity_in_range(activity) {
             return Err(ValidationError::InvalidIdleActivity)?;
         }
+        user.idle_activity = activity;
+        update_nutrients = true;
     }
 
     if let Some(activity) = details.workout_activity {
         if !is_activity_in_range(activity) {
             return Err(ValidationError::InvalidWorkoutActivity)?;
         }
+        user.workout_activity = activity;
+        update_nutrients = true;
+    }
+
+    // TODO: update BMR, TDEE if updated height or weight
+    if update_nutrients {
+
     }
 
     user_repo::update_user_details_opt(

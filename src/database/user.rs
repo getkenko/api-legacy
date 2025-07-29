@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserNutrition}};
+use crate::models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserDetailsWithGoals, UserNutrition}};
 
 const DEFAULT_PROTEIN_DIST: i32 = 25;
 const DEFAULT_FAT_DIST: i32 = 25;
@@ -92,6 +92,34 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
         WHERE u.id = $1
         "#,
         id,
+    )
+    .fetch_one(db)
+    .await
+}
+
+// Weight, height, age, sex, idle activity, workout activity, weight goal, goal diff per week
+pub async fn fetch_user_details_with_goals(
+    db: &PgPool,
+    user_id: Uuid,
+) -> sqlx::Result<UserDetailsWithGoals> {
+    sqlx::query_as!(
+        UserDetailsWithGoals,
+        r#"
+        SELECT
+            det.sex AS "sex: _",
+            det.weight,
+            det.height,
+            det.date_of_birth,
+            det.idle_activity,
+            det.workout_activity,
+            det.diet_kind AS "diet_kind: _",
+            go.goal_diff_per_week,
+            go.weight_goal AS "weight_goal: _"
+        FROM user_details det
+        JOIN user_goals go ON go.user_id = det.user_id
+        WHERE det.user_id = $1
+        "#,
+        user_id,
     )
     .fetch_one(db)
     .await

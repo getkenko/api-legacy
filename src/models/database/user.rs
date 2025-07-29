@@ -59,6 +59,21 @@ pub struct FullUser {
     pub carb_dist: Option<i32>,
 }
 
+pub struct UserDetailsWithGoals {
+    // details
+    pub sex: Sex,
+    pub weight: f32,
+    pub height: i32,
+    pub date_of_birth: NaiveDate,
+    pub idle_activity: i32,
+    pub workout_activity: i32,
+    pub diet_kind: DietKind,
+
+    // goals
+    pub weight_goal: WeightGoal,
+    pub goal_diff_per_week: f32,
+}
+
 #[derive(sqlx::FromRow)]
 pub struct UserConflicts {
     pub username_taken: Option<bool>,
