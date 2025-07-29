@@ -1,9 +1,10 @@
 use axum::extract::Multipart;
+use chrono::Utc;
 use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::user_repo, models::{database::enums::{HeightUnit, WeightUnit}, dto::users::{FullUserView, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult, ValidationError}}, security::password::verify_password, utils::{conversion::{ft_in_to_cm, lb_to_kg}, validation::{is_activity_in_range, validate_date_of_birth}}};
+use crate::{database::{user_nutrients_repo, user_repo}, models::{dto::users::{FullUserView, UpdateUser, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult, ValidationError}}, security::password::{hash_password, verify_password}, utils::{conversion::{height_from_unit, weight_from_unit}, nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth}}};
 
 pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = user_repo::fetch_full_user(db, user_id).await?;
@@ -11,37 +12,38 @@ pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUse
     Ok(user_view)
 }
 
-fn weight_from_unit(unit: WeightUnit, details: &UpdateUserDetailsRequest) -> AppResult<f32> {
-    let weight = match unit {
-        WeightUnit::Kg => details.weight_kg.ok_or(ValidationError::MissingKgWeight)?,
-        WeightUnit::Lb => {
-            let lb = details.weight_lb.ok_or(ValidationError::MissingLbWeight)?;
-            lb_to_kg(lb)
-        }
-    };
-
-    if weight <= 0.0 || weight >= 10000.0 {
-        return Err(ValidationError::InvalidWeight)?;
+pub async fn update_user_credentials(db: &PgPool, user_id: Uuid, update: UpdateUser) -> AppResult<()> {
+    if update.display_name.is_none() && update.username.is_none() && update.password.is_none() && update.email.is_none() {
+        return Err(ValidationError::NoFieldsProvided)?;
     }
 
-    Ok(weight)
-}
+    let mut user = user_repo::find_user(db, user_id)
+        .await?
+        .ok_or(AppError::UserNotFound)?;
 
-fn height_from_unit(unit: HeightUnit, details: &UpdateUserDetailsRequest) -> AppResult<i32> {
-    let height = match unit {
-        HeightUnit::Cm => details.height_cm.ok_or(ValidationError::MissingCmHeight)?,
-        HeightUnit::FtIn => {
-            let ft = details.height_ft.ok_or(ValidationError::MissingFtInHeight)?;
-            let inches = details.height_in.ok_or(ValidationError::MissingFtInHeight)?;
-            ft_in_to_cm(ft, inches)
-        }
-    };
-
-    if height <= 0 || height >= 300 {
-        return Err(ValidationError::InvalidHeight)?;
+    if !verify_password(&update.current_password, &user.password).map_err(AppError::Crypto)? {
+        return Err(AppError::IncorrectPassword);
     }
 
-    Ok(height)
+    if let Some(username) = update.username {
+        user.username = username;
+    }
+
+    if let Some(display_name) = update.display_name {
+        user.display_name = display_name;
+    }
+
+    if let Some(password) = update.password {
+        user.password = hash_password(&password).map_err(AppError::Crypto)?;
+    }
+
+    if let Some(email) = update.email {
+        user.email = email;
+    }
+
+    user_repo::update_credentials(db, user_id, &user).await?;
+
+    Ok(())
 }
 
 pub async fn update_user_details(
@@ -59,27 +61,20 @@ pub async fn update_user_details(
         return Err(ValidationError::NoFieldsProvided)?;
     }
 
-    // fetch user details needed for BMR/TDEE calc
+    // we do fetch -> update because we need to use some of the values anyways
     let mut user = user_repo::fetch_user_details_with_goals(db, user_id).await?;
-    let mut update_nutrients = false;
 
-    // piratesoftware code type shit
-    let (weight, height) = if is_weight_provided || is_height_provided {
-        let (weight_unit, height_unit) = user_repo::fetch_user_units(db, user_id).await?;
+    if is_weight_provided {
+        user.weight = weight_from_unit(&user.weight_unit, &details)?;
+    }
 
-        let weight = weight_from_unit(weight_unit, &details).map(Some)?;
-        let height = height_from_unit(height_unit, &details).map(Some)?;
-
-        update_nutrients = true;
-        (weight, height)
-    } else {
-        (None, None)
-    };
+    if is_height_provided {
+        user.height = height_from_unit(&user.height_unit, &details)?;
+    }
 
     if let Some(dob) = details.date_of_birth {
         validate_date_of_birth(dob)?;
         user.date_of_birth = dob;
-        update_nutrients = true;
     }
 
     if let Some(activity) = details.idle_activity {
@@ -87,7 +82,6 @@ pub async fn update_user_details(
             return Err(ValidationError::InvalidIdleActivity)?;
         }
         user.idle_activity = activity;
-        update_nutrients = true;
     }
 
     if let Some(activity) = details.workout_activity {
@@ -95,25 +89,21 @@ pub async fn update_user_details(
             return Err(ValidationError::InvalidWorkoutActivity)?;
         }
         user.workout_activity = activity;
-        update_nutrients = true;
     }
 
-    // TODO: update BMR, TDEE if updated height or weight
-    if update_nutrients {
+    let mut tx = db.begin().await?;
+    user_repo::update_user_details(&mut *tx, user_id, &user).await?;
 
-    }
+    // update user nutrients (any value updated in this function has impact on them)
+    let age = Utc::now().date_naive().years_since(user.date_of_birth).unwrap_or(18);
 
-    user_repo::update_user_details_opt(
-        db,
-        user_id,
-        details.sex,
-        weight,
-        height,
-        details.date_of_birth,
-        details.idle_activity,
-        details.workout_activity,
-        details.diet_kind,
-    ).await?;
+    let bmr = calculate_bmr(user.weight, user.height, age, user.sex);
+    let base_tdee = calc_base_tdee(bmr, user.workout_activity, user.idle_activity);
+    let tdee = calculate_tdee(base_tdee, user.goal_diff_per_week, user.weight_goal);
+    let macros = calc_target_macros(user.weight, tdee, user.weight_goal);
+    user_nutrients_repo::update_user_nutrients(&mut *tx, user_id, bmr, base_tdee, tdee, &macros).await?;
+    
+    tx.commit().await?;
 
     Ok(())
 }

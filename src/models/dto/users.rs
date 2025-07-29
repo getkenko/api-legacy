@@ -121,3 +121,13 @@ pub struct UpdateUserPreferencesRequest {
 pub struct DeleteAccountRequest {
     pub password: String,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateUser {
+    pub current_password: String,
+
+    pub username: Option<String>,
+    pub display_name: Option<String>,
+    pub password: Option<String>,
+    pub email: Option<String>,
+}

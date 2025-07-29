@@ -8,7 +8,7 @@ pub enum Sex {
     Female,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, sqlx::Type, strum_macros::Display)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, sqlx::Type, strum_macros::Display)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "account_state_enum", rename_all = "snake_case")]
 pub enum AccountState {
@@ -18,7 +18,7 @@ pub enum AccountState {
     Inactive,
 }
 
-#[derive(Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "theme_enum", rename_all = "snake_case")]
 pub enum Theme {
@@ -27,7 +27,7 @@ pub enum Theme {
     Light,
 }
 
-#[derive(Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "language_enum", rename_all = "lowercase")]
 pub enum Language {
@@ -35,14 +35,14 @@ pub enum Language {
     Pl,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Clone, Copy, sqlx::Type)]
 #[sqlx(type_name = "meal_product_kind_enum", rename_all = "snake_case")]
 pub enum MealProductKind {
     FromDatabase,
     QuickAdd,
 }
 
-#[derive(Debug, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Deserialize, sqlx::Type)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "weight_unit_enum", rename_all = "snake_case")]
 pub enum WeightUnit {
@@ -50,7 +50,7 @@ pub enum WeightUnit {
     Lb,
 }
 
-#[derive(Debug, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Deserialize, sqlx::Type)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(type_name = "height_unit_enum", rename_all = "snake_case")]
 pub enum HeightUnit {
@@ -67,7 +67,7 @@ pub enum WeightGoal {
     Maintain,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "user_origin_enum", rename_all = "lowercase")]
 pub enum UserOrigin {
@@ -80,7 +80,7 @@ pub enum UserOrigin {
     Other,
 }
 
-#[derive(Serialize, Deserialize, sqlx::Type)]
+#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "diet_kind_enum", rename_all = "snake_case")]
 pub enum DietKind {
@@ -91,7 +91,7 @@ pub enum DietKind {
     Classic,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "unit_enum", rename_all = "snake_case")]
 pub enum Unit {
     #[serde(rename = "g")]

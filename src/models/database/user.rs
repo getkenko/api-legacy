@@ -59,7 +59,7 @@ pub struct FullUser {
     pub carb_dist: Option<i32>,
 }
 
-pub struct UserDetailsWithGoals {
+pub struct UserDetailsWithGoalsAndPreferences {
     // details
     pub sex: Sex,
     pub weight: f32,
@@ -67,11 +67,14 @@ pub struct UserDetailsWithGoals {
     pub date_of_birth: NaiveDate,
     pub idle_activity: i32,
     pub workout_activity: i32,
-    pub diet_kind: DietKind,
 
     // goals
     pub weight_goal: WeightGoal,
     pub goal_diff_per_week: f32,
+
+    // preferences
+    pub weight_unit: WeightUnit,
+    pub height_unit: HeightUnit,
 }
 
 #[derive(sqlx::FromRow)]

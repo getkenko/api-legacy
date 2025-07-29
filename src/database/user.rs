@@ -1,8 +1,7 @@
-use chrono::NaiveDate;
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::{FullUser, InsertUser, User, UserConflicts, UserDetailsWithGoals, UserNutrition}};
+use crate::models::database::{enums::{Language, Theme}, user::{FullUser, InsertUser, User, UserConflicts, UserDetailsWithGoalsAndPreferences, UserNutrition}};
 
 const DEFAULT_PROTEIN_DIST: i32 = 25;
 const DEFAULT_FAT_DIST: i32 = 25;
@@ -101,9 +100,9 @@ pub async fn fetch_full_user(db: &PgPool, id: Uuid) -> sqlx::Result<FullUser> {
 pub async fn fetch_user_details_with_goals(
     db: &PgPool,
     user_id: Uuid,
-) -> sqlx::Result<UserDetailsWithGoals> {
+) -> sqlx::Result<UserDetailsWithGoalsAndPreferences> {
     sqlx::query_as!(
-        UserDetailsWithGoals,
+        UserDetailsWithGoalsAndPreferences,
         r#"
         SELECT
             det.sex AS "sex: _",
@@ -112,11 +111,13 @@ pub async fn fetch_user_details_with_goals(
             det.date_of_birth,
             det.idle_activity,
             det.workout_activity,
-            det.diet_kind AS "diet_kind: _",
             go.goal_diff_per_week,
-            go.weight_goal AS "weight_goal: _"
+            go.weight_goal AS "weight_goal: _",
+            pref.weight_unit AS "weight_unit: _",
+            pref.height_unit AS "height_unit: _"
         FROM user_details det
         JOIN user_goals go ON go.user_id = det.user_id
+        JOIN user_preferences pref ON pref.user_id = det.user_id
         WHERE det.user_id = $1
         "#,
         user_id,
@@ -156,23 +157,6 @@ pub async fn fetch_user_conflicts_opt(
         .build_query_as::<UserConflicts>()
         .fetch_one(db)
         .await
-}
-
-pub async fn fetch_user_units(db: &PgPool, user_id: Uuid) -> sqlx::Result<(WeightUnit, HeightUnit)> {
-    let user = sqlx::query!(
-        r#"
-        SELECT
-            weight_unit AS "weight_unit: WeightUnit",
-            height_unit AS "height_unit: HeightUnit"
-        FROM user_preferences
-        WHERE user_id = $1
-        "#,
-        user_id,
-    )
-    .fetch_one(db)
-    .await?;
-
-    Ok((user.weight_unit, user.height_unit))
 }
 
 pub async fn fetch_user_tdee(db: &PgPool, user_id: Uuid) -> sqlx::Result<f32> {
@@ -283,60 +267,33 @@ pub async fn update_user_avatar(db: &PgPool, user_id: Uuid, avatar: Option<Strin
     Ok(())
 }
 
-pub async fn update_user_details_opt(
-    db: &PgPool,
-    user_id: Uuid,
-    sex: Option<Sex>,
-    weight: Option<f32>,
-    height: Option<i32>,
-    date_of_birth: Option<NaiveDate>,
-    idle_activity: Option<i32>,
-    workout_activity: Option<i32>,
-    diet_kind: Option<DietKind>,
-) -> sqlx::Result<()> {
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_details SET ");
-    let mut separated = builder.separated(", ");
+pub async fn update_credentials(db: &PgPool, user_id: Uuid, update: &User) -> sqlx::Result<()> {
+    sqlx::query!(
+        "
+        UPDATE users
+        SET username = $2, display_name = $3, password = $4, email = $5
+        WHERE id = $1
+        ",
+        user_id, update.username, update.display_name, update.password, update.email,
+    )
+    .execute(db)
+    .await?;
 
-    if let Some(sex) = sex {
-        separated.push("sex = ");
-        separated.push_bind_unseparated(sex);
-    }
+    Ok(())
+}
 
-    if let Some(weight) = weight {
-        separated.push("weight = ");
-        separated.push_bind_unseparated(weight);
-    }
-
-    if let Some(height) = height {
-        separated.push("height = ");
-        separated.push_bind_unseparated(height);
-    }
-
-    if let Some(date_of_birth) = date_of_birth {
-        separated.push("date_of_birth = ");
-        separated.push_bind_unseparated(date_of_birth);
-    }
-
-    if let Some(activity) = idle_activity {
-        separated.push("idle_activity = ");
-        separated.push_bind_unseparated(activity);
-    }
-
-    if let Some(activity) = workout_activity {
-        separated.push("workout_activity = ");
-        separated.push_bind_unseparated(activity);
-    }
-
-    if let Some(diet) = diet_kind {
-        separated.push("diet_kind = ");
-        separated.push_bind_unseparated(diet);
-    }
-
-    builder
-        .push(" WHERE user_id = ")
-        .push_bind(user_id);
-
-    builder.build().execute(db).await?;
+pub async fn update_user_details(db: impl PgExecutor<'_>, user_id: Uuid, update: &UserDetailsWithGoalsAndPreferences) -> sqlx::Result<()> {
+    sqlx::query!(
+        "
+        UPDATE user_details
+        SET sex = $2, weight = $3, height = $4, date_of_birth = $5, idle_activity = $6, workout_activity = $7
+        WHERE user_id = $1
+        ",
+        user_id, update.sex as _, update.weight, update.height,
+        update.date_of_birth, update.idle_activity, update.workout_activity,
+    )
+    .execute(db)
+    .await?;
 
     Ok(())
 }

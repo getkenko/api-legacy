@@ -66,7 +66,7 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
         fat_target: macros.fats.round() as _,
         carb_target: macros.carbohydrates.round() as _,
     };
-
+    
     // insert user to database
     user_repo::insert_user(db, insert, nutrition).await?;
 
