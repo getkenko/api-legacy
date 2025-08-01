@@ -4,6 +4,7 @@ mod products;
 mod meals;
 mod sections;
 mod nutrients;
+mod fridge;
 
 use axum::{extract::DefaultBodyLimit, http::StatusCode, middleware, routing::get, Router};
 use sqlx::PgPool;
@@ -28,6 +29,7 @@ pub fn router(db: PgPool, cache: Cache) -> Router {
         .nest("/meals", meals::router(state.clone()))
         .nest("/sections", sections::router(state.clone()))
         .nest("/nutrients", nutrients::router(state.clone()))
+        .nest("/fridge", fridge::router())
         .nest_service("/public", ServeDir::new("public"))
 
         .with_state(state.clone())

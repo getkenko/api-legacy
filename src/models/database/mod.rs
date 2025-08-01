@@ -3,3 +3,4 @@ pub mod product;
 pub mod user;
 pub mod meal;
 pub mod section;
+pub mod fridge;
