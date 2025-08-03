@@ -18,7 +18,7 @@ pub async fn find_product(db: &PgPool, barcode: i64) -> sqlx::Result<Option<Prod
     sqlx::query_as!(
         Product,
         r#"
-        SELECT id, name, barcode, ingredients, unit AS "unit: _", quantity, calories, proteins, fats, carbohydrates
+        SELECT id, name, barcode, brand, ingredients, unit AS "unit: _", quantity, calories, proteins, fats, carbohydrates
         FROM products
         WHERE barcode = $1
         LIMIT 1
@@ -35,13 +35,13 @@ pub async fn fetch_products(db: &PgPool, query: &str) -> sqlx::Result<Vec<Produc
         r#"
         WITH
         fts_results AS (
-            SELECT id, name, barcode, ingredients, unit, quantity, calories, proteins, fats, carbohydrates, search_vector, 1 AS rank_source
+            SELECT id, name, barcode, brand, ingredients, unit, quantity, calories, proteins, fats, carbohydrates, search_vector, 1 AS rank_source
             FROM products
             WHERE search_vector @@ plainto_tsquery('english', $1)
             LIMIT 10
         ),
         fzf_results AS (
-            SELECT id, name, barcode, ingredients, unit, quantity, calories, proteins, fats, carbohydrates, search_vector, 2 AS rank_source
+            SELECT id, name, barcode, brand, ingredients, unit, quantity, calories, proteins, fats, carbohydrates, search_vector, 2 AS rank_source
             FROM products
             WHERE (
                 similarity(name, $1) > 0.3 OR
@@ -54,9 +54,9 @@ pub async fn fetch_products(db: &PgPool, query: &str) -> sqlx::Result<Vec<Produc
             ) DESC
             LIMIT 10
         )
-        SELECT id AS "id!", name AS "name!", barcode AS "barcode!", ingredients AS "ingredients!", unit AS "unit!: _", quantity AS "quantity!", calories AS "calories!", proteins AS "proteins!", fats AS "fats!", carbohydrates AS "carbohydrates!" FROM fts_results
+        SELECT id AS "id!", name AS "name!", barcode AS "barcode!", brand AS "brand!", ingredients AS "ingredients!", unit AS "unit!: _", quantity AS "quantity!", calories AS "calories!", proteins AS "proteins!", fats AS "fats!", carbohydrates AS "carbohydrates!" FROM fts_results
         UNION ALL
-        SELECT id AS "id!", name AS "name!", barcode AS "barcode!", ingredients AS "ingredients!", unit AS "unit!: _", quantity AS "quantity!", calories AS "calories!", proteins AS "proteins!", fats AS "fats!", carbohydrates AS "carbohydrates!" FROM fzf_results
+        SELECT id AS "id!", name AS "name!", barcode AS "barcode!", brand AS "brand!", ingredients AS "ingredients!", unit AS "unit!: _", quantity AS "quantity!", calories AS "calories!", proteins AS "proteins!", fats AS "fats!", carbohydrates AS "carbohydrates!" FROM fzf_results
         LIMIT 10
         "#,
         query,

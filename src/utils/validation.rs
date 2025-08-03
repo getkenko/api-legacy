@@ -75,3 +75,11 @@ pub fn validate_date_of_birth(dob: NaiveDate) -> AppResult<()> {
 
     Ok(())
 }
+
+pub fn validate_goal_diff_per_week(value: f32) -> AppResult<()> {
+    if value < 0.1 || value > 1.0 {
+        return Err(ValidationError::InvalidGoalDiffPerWeek)?;
+    }
+
+    Ok(())
+}

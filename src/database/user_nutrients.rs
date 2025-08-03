@@ -3,11 +3,20 @@ use uuid::Uuid;
 
 use crate::utils::nutrition::TargetMacros;
 
-pub async fn update_user_nutrients(db: impl PgExecutor<'_>, user_id: Uuid, bmr: f32, base_tdee: f32, tdee: f32, macros: &TargetMacros) -> sqlx::Result<()> {
+pub async fn update_user_nutrients(
+    db: impl PgExecutor<'_>,
+    user_id: Uuid,
+    bmr: Option<f32>,
+    base_tdee: Option<f32>,
+    tdee: f32,
+    macros: &TargetMacros,
+) -> sqlx::Result<()> {
     sqlx::query!(
         "
         UPDATE user_nutrients
-        SET bmr = $2, base_tdee = $3, tdee = $4, protein_target = $5, fat_target = $6, carb_target = $7
+        SET
+            bmr = COALESCE($2, bmr), base_tdee = COALESCE($3, base_tdee), tdee = $4,
+            protein_target = $5, fat_target = $6, carb_target = $7
         WHERE user_id = $1
         ",
         user_id, bmr, base_tdee, tdee,

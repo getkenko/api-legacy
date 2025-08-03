@@ -1,7 +1,7 @@
-use sqlx::{PgExecutor, PgPool, Postgres, QueryBuilder};
+use sqlx::{PgExecutor, PgPool, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::database::{enums::{Language, Theme}, user::{FullUser, InsertUser, User, UserConflicts, UserDetailsWithGoalsAndPreferences, UserNutrition}};
+use crate::models::database::{enums::{HeightUnit, Language, Theme, WeightGoal, WeightUnit}, user::{FullUser, InsertUser, MinimalUserForTdee, User, UserConflicts, UserDetailsWithGoalsAndPreferences, UserNutrition}};
 
 const DEFAULT_PROTEIN_DIST: i32 = 25;
 const DEFAULT_FAT_DIST: i32 = 25;
@@ -121,6 +121,23 @@ pub async fn fetch_user_details_with_goals(
         WHERE det.user_id = $1
         "#,
         user_id,
+    )
+    .fetch_one(db)
+    .await
+}
+
+// I have no idea how to name this function, its shit but whatever, does its job
+pub async fn fetch_minimal_data_for_tdee(db: &PgPool, user_id: Uuid) -> sqlx::Result<MinimalUserForTdee> {
+    sqlx::query_as!(
+        MinimalUserForTdee,
+        r#"
+        SELECT n.base_tdee, d.weight, g.weight_goal AS "weight_goal: _", g.goal_diff_per_week
+        FROM user_nutrients n
+        JOIN user_details d ON d.user_id = n.user_id
+        JOIN user_goals g ON g.user_id = n.user_id
+        WHERE n.user_id = $1
+        "#,
+        user_id
     )
     .fetch_one(db)
     .await
@@ -298,30 +315,46 @@ pub async fn update_user_details(db: impl PgExecutor<'_>, user_id: Uuid, update:
     Ok(())
 }
 
-pub async fn update_user_preferences_opt(
+pub async fn update_preferences(
     db: &PgPool,
     user_id: Uuid,
     theme: Option<Theme>,
     language: Option<Language>,
+    weight_unit: Option<WeightUnit>,
+    height_unit: Option<HeightUnit>,
 ) -> sqlx::Result<()> {
-    let mut builder = QueryBuilder::<Postgres>::new("UPDATE user_preferences SET ");
-    let mut separated = builder.separated(", ");
+    sqlx::query!(
+        "
+        UPDATE user_preferences
+        SET
+            theme = COALESCE($2, theme), language = COALESCE($3, language),
+            weight_unit = COALESCE($4, weight_unit), height_unit = COALESCE($5, height_unit)
+        WHERE user_id = $1
+        ",
+        user_id, theme as _, language as _, weight_unit as _, height_unit as _,
+    )
+    .execute(db)
+    .await?;
 
-    if let Some(theme) = theme {
-        separated.push("theme = ");
-        separated.push_bind_unseparated(theme);
-    }
+    Ok(())
+}
 
-    if let Some(language) = language {
-        separated.push("language = ");
-        separated.push_bind_unseparated(language);
-    }
-
-    builder
-        .push(" WHERE user_id = ")
-        .push_bind(user_id);
-
-    builder.build().execute(db).await?;
+pub async fn update_goals(
+    db: impl PgExecutor<'_>,
+    user_id: Uuid,
+    goal_diff: Option<f32>,
+    weight_goal: Option<WeightGoal>,
+) -> sqlx::Result<()> {
+    sqlx::query!(
+        "
+        UPDATE user_goals
+        SET goal_diff_per_week = COALESCE($2, goal_diff_per_week), weight_goal = COALESCE($3, weight_goal)
+        WHERE user_id = $1
+        ",
+        user_id, goal_diff, weight_goal as _,
+    )
+    .execute(db)
+    .await?;
 
     Ok(())
 }

@@ -34,6 +34,9 @@ pub enum ValidationError {
     #[error("Invalid date of birth provided! It cannot be a date in future")]
     DateOfBirthInFuture,
 
+    #[error("Invalid goal difference per week provided, it should be in 0.1 - 1.0 range")]
+    InvalidGoalDiffPerWeek,
+
     // middlewares
     #[error("Failed to parse authorization token because it contains invalid symbols")]
     InvalidToken,

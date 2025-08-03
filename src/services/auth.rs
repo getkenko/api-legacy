@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sqlx::PgPool;
 
-use crate::{database::user_repo, models::{database::{enums::AccountState, user::{InsertUser, UserNutrition}}, dto::auth::{CheckAvailabilityQuery, LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult, ValidationError}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth, validate_email, validate_password, validate_username}}};
+use crate::{database::user_repo, models::{database::{enums::AccountState, user::{InsertUser, UserNutrition}}, dto::auth::{CheckAvailabilityQuery, LoginRequest, LoginResponse, RegisterRequest, UserConflictsView}, errors::{AppError, AppResult, ValidationError}}, security::{jwt::Token, password::verify_password}, utils::{nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth, validate_email, validate_goal_diff_per_week, validate_password, validate_username}}};
 
 pub async fn process_login(db: &PgPool, creds: LoginRequest) -> AppResult<LoginResponse> {
     // try to find the user
@@ -35,6 +35,7 @@ pub async fn process_register(db: &PgPool, user_data: RegisterRequest) -> AppRes
     if !is_activity_in_range(user_data.workout_activity) {
         return  Err(ValidationError::InvalidWorkoutActivity)?;
     }
+    validate_goal_diff_per_week(user_data.goal_diff_per_week)?;
 
     // check if username and/or email is already used by someone else
     let conflicts = user_repo::fetch_user_conflicts_opt(db, Some(user_data.username.clone()), Some(user_data.email.clone())).await?;

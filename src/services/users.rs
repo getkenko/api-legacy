@@ -4,15 +4,15 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncWriteExt};
 use uuid::Uuid;
 
-use crate::{database::{user_nutrients_repo, user_repo}, models::{dto::users::{FullUserView, UpdateUser, UpdateUserDetailsRequest, UpdateUserPreferencesRequest}, errors::{AppError, AppResult, ValidationError}}, security::password::{hash_password, verify_password}, utils::{conversion::{height_from_unit, weight_from_unit}, nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth}}};
+use crate::{database::{user_nutrients_repo, user_repo}, models::{dto::users::{FullUserView, UpdateUser, UpdateUserDetailsRequest, UpdateUserGoalsDto, UpdateUserPreferencesDto}, errors::{AppError, AppResult, ValidationError}}, security::password::{hash_password, verify_password}, utils::{conversion::{height_from_unit, weight_from_unit}, nutrition::{calc_base_tdee, calc_target_macros, calculate_bmr, calculate_tdee}, validation::{is_activity_in_range, validate_date_of_birth, validate_email, validate_goal_diff_per_week, validate_password}}};
 
-pub async fn get_full_user_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
+pub async fn get_full_info(db: &PgPool, user_id: Uuid) -> AppResult<FullUserView> {
     let user = user_repo::fetch_full_user(db, user_id).await?;
     let user_view = FullUserView::from(user);
     Ok(user_view)
 }
 
-pub async fn update_user_credentials(db: &PgPool, user_id: Uuid, update: UpdateUser) -> AppResult<()> {
+pub async fn update_credentials(db: &PgPool, user_id: Uuid, update: UpdateUser) -> AppResult<()> {
     if update.display_name.is_none() && update.username.is_none() && update.password.is_none() && update.email.is_none() {
         return Err(ValidationError::NoFieldsProvided)?;
     }
@@ -34,10 +34,12 @@ pub async fn update_user_credentials(db: &PgPool, user_id: Uuid, update: UpdateU
     }
 
     if let Some(password) = update.password {
+        validate_password(&password)?;
         user.password = hash_password(&password).map_err(AppError::Crypto)?;
     }
 
     if let Some(email) = update.email {
+        validate_email(&email)?;
         user.email = email;
     }
 
@@ -46,7 +48,7 @@ pub async fn update_user_credentials(db: &PgPool, user_id: Uuid, update: UpdateU
     Ok(())
 }
 
-pub async fn update_user_details(
+pub async fn update_details(
     db: &PgPool,
     user_id: Uuid,
     details: UpdateUserDetailsRequest,
@@ -101,24 +103,47 @@ pub async fn update_user_details(
     let base_tdee = calc_base_tdee(bmr, user.workout_activity, user.idle_activity);
     let tdee = calculate_tdee(base_tdee, user.goal_diff_per_week, user.weight_goal);
     let macros = calc_target_macros(user.weight, tdee, user.weight_goal);
-    user_nutrients_repo::update_user_nutrients(&mut *tx, user_id, bmr, base_tdee, tdee, &macros).await?;
+    user_nutrients_repo::update_user_nutrients(&mut *tx, user_id, Some(bmr), Some(base_tdee), tdee, &macros).await?;
     
     tx.commit().await?;
 
     Ok(())
 }
 
-pub async fn update_user_preferences(db: &PgPool, user_id: Uuid, preferences: UpdateUserPreferencesRequest) -> AppResult<()> {
-    if preferences.theme.is_none() && preferences.language.is_none() {
+pub async fn update_preferences(db: &PgPool, user_id: Uuid, pref: UpdateUserPreferencesDto) -> AppResult<()> {
+    if pref.theme.is_none() && pref.language.is_none() && pref.weight_unit.is_none() && pref.height_unit.is_none() {
         return Err(ValidationError::NoFieldsProvided)?;
     }
 
-    user_repo::update_user_preferences_opt(db, user_id, preferences.theme, preferences.language).await?;
+    user_repo::update_preferences(db, user_id, pref.theme, pref.language, pref.weight_unit, pref.height_unit).await?;
 
     Ok(())
 }
 
-pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: Multipart) -> AppResult<()> {
+pub async fn update_goals(db: &PgPool, user_id: Uuid, goals: UpdateUserGoalsDto) -> AppResult<()> {
+    if goals.goal_diff_per_week.is_none() && goals.weight_goal.is_none() {
+        return Err(ValidationError::NoFieldsProvided)?;
+    }
+
+    if let Some(goal_diff) = goals.goal_diff_per_week {
+        validate_goal_diff_per_week(goal_diff)?;
+    }
+
+    let mut tx = db.begin().await?;
+    user_repo::update_goals(&mut *tx, user_id, goals.goal_diff_per_week, goals.weight_goal).await?;
+
+    let user = user_repo::fetch_minimal_data_for_tdee(db, user_id).await?;
+    let goal_diff = goals.goal_diff_per_week.unwrap_or(user.goal_diff_per_week);
+    let weight_goal = goals.weight_goal.unwrap_or(user.weight_goal);
+
+    let tdee = calculate_tdee(user.base_tdee, goal_diff, weight_goal);
+    let macros = calc_target_macros(user.weight, tdee, weight_goal);
+    user_nutrients_repo::update_user_nutrients(db, user_id, None, None, tdee, &macros).await?;
+
+    Ok(())
+}
+
+pub async fn update_avatar(db: &PgPool, user_id: Uuid, mut form: Multipart) -> AppResult<()> {
     while let Some(field) = form.next_field().await? {
         if field.name() == Some("avatar") {
             let data = field.bytes().await?;
@@ -146,12 +171,12 @@ pub async fn update_user_avatar_from_form(db: &PgPool, user_id: Uuid, mut form: 
     Ok(())
 }
 
-pub async fn delete_user_avatar(db: &PgPool, user_id: Uuid) -> AppResult<()> {
+pub async fn delete_avatar(db: &PgPool, user_id: Uuid) -> AppResult<()> {
     user_repo::update_user_avatar(db, user_id, None).await?;
     Ok(())
 }
 
-pub async fn delete_user_account(db: &PgPool, user_id: Uuid, password: &str) -> AppResult<()> {
+pub async fn delete(db: &PgPool, user_id: Uuid, password: &str) -> AppResult<()> {
     let user = user_repo::find_user(db, user_id)
         .await?
         .ok_or(AppError::UserNotFound)?;

@@ -114,3 +114,10 @@ pub struct UserNutrition {
     pub fat_target: i32,
     pub carb_target: i32,
 }
+
+pub struct MinimalUserForTdee {
+    pub base_tdee: f32,
+    pub weight: f32,
+    pub weight_goal: WeightGoal,
+    pub goal_diff_per_week: f32,
+}

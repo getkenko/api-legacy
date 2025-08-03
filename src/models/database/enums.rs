@@ -58,7 +58,7 @@ pub enum HeightUnit {
     FtIn,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "camelCase")]
 #[sqlx(type_name = "weight_goal_enum", rename_all = "snake_case")]
 pub enum WeightGoal {

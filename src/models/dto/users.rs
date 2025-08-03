@@ -4,7 +4,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{config::CONFIG, models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb}};
+use crate::{config::CONFIG, models::database::{enums::{DietKind, HeightUnit, Language, Sex, Theme, WeightGoal, WeightUnit}, user::FullUser}, utils::conversion::{cm_to_ft_in, kg_to_lb}};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,9 +112,11 @@ pub struct UpdateUserDetailsRequest {
 }
 
 #[derive(Deserialize)]
-pub struct UpdateUserPreferencesRequest {
+pub struct UpdateUserPreferencesDto {
     pub theme: Option<Theme>,
     pub language: Option<Language>,
+    pub weight_unit: Option<WeightUnit>,
+    pub height_unit: Option<HeightUnit>,
 }
 
 #[derive(Deserialize)]
@@ -123,6 +125,7 @@ pub struct DeleteAccountRequest {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateUser {
     pub current_password: String,
 
@@ -130,4 +133,11 @@ pub struct UpdateUser {
     pub display_name: Option<String>,
     pub password: Option<String>,
     pub email: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserGoalsDto {
+    pub weight_goal: Option<WeightGoal>,
+    pub goal_diff_per_week: Option<f32>,
 }
