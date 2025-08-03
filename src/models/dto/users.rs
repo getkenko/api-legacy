@@ -112,6 +112,7 @@ pub struct UpdateUserDetailsRequest {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateUserPreferencesDto {
     pub theme: Option<Theme>,
     pub language: Option<Language>,
@@ -120,6 +121,7 @@ pub struct UpdateUserPreferencesDto {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteAccountRequest {
     pub password: String,
 }
