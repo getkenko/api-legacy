@@ -129,16 +129,19 @@ pub async fn update_goals(db: &PgPool, user_id: Uuid, goals: UpdateUserGoalsDto)
         validate_goal_diff_per_week(goal_diff)?;
     }
 
+    let user = user_repo::fetch_minimal_data_for_tdee(db, user_id).await?;
+
     let mut tx = db.begin().await?;
     user_repo::update_goals(&mut *tx, user_id, goals.goal_diff_per_week, goals.weight_goal).await?;
 
-    let user = user_repo::fetch_minimal_data_for_tdee(db, user_id).await?;
     let goal_diff = goals.goal_diff_per_week.unwrap_or(user.goal_diff_per_week);
     let weight_goal = goals.weight_goal.unwrap_or(user.weight_goal);
 
     let tdee = calculate_tdee(user.base_tdee, goal_diff, weight_goal);
     let macros = calc_target_macros(user.weight, tdee, weight_goal);
-    user_nutrients_repo::update_user_nutrients(db, user_id, None, None, tdee, &macros).await?;
+    user_nutrients_repo::update_user_nutrients(&mut *tx, user_id, None, None, tdee, &macros).await?;
+
+    tx.commit().await?;
 
     Ok(())
 }
