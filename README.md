@@ -1,26 +1,5 @@
-# ⚠️ Legal Notice / Licensing Warning
-
-This repository is a **re-upload of the original Kenko API source code**.
-
-The project was previously published without authorization and under an incorrect license.
-
-That licensing was **invalid and does not reflect the actual terms** under which this code was created and distributed.
-
-## Correct License
-
-This project is licensed under the **Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)** license.
-
-All prior distributions under MIT should be considered **incorrect and legally void**.
-
-## Important Notes
-
-- This repository represents the **official and authorized version** of the project.
-- The licensing has been **corrected to reflect the original intent and legal status**.
-- If you have obtained this code from another source under different terms, please refer to this repository as the **canonical source of truth**.
-
-For full license terms, see the [LICENSE](LICENSE) file.
-
----
+> [!IMPORTANT]
+> This repository represents the **official and authorized version of the original Kenko API source code**. The project was previously published without authorization and under an incorrect license. For full license terms, see the [LICENSE](LICENSE) file. All prior distributions should be considered **incorrect and legally void**. If you have obtained this code from another source under different terms, please refer to this repository as the **canonical source of truth**.
 
 # Kenko API
 
