@@ -32,7 +32,7 @@ It's written in Rust using Axum web framework, SQLx as database driver, PostgreS
 
 This project was never intended to be made public therefore it lacks any code documentation and comments.
 
-However you can find documentation of the API routes and usage on [Postman](https://documenter.getpostman.com/view/38099323/2sBXigLsp3).
+However you can find documentation of the API routes and usage on [Postman](https://documenter.getpostman.com/view/46028768/2sBXihrDFH).
 
 ## Building
 
